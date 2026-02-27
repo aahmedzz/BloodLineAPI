@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="BloodLineAPI.Application/BloodLineAPI.Application.csproj" />
+  <Project Path="BloodLineAPI.Domain/BloodLineAPI.Domain.csproj" />
+  <Project Path="BloodLineAPI.Infrastructure/BloodLineAPI.Infrastructure.csproj" />
+  <Project Path="BloodLineAPI/BloodLineAPI.csproj" />
+</Solution>
