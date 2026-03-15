@@ -1,4 +1,4 @@
-using BloodLineAPI.Domain.Enums;
+using BloodBankSystem.Domain.Enums;
 
 namespace BloodLineAPI.Application.Features.Donors.Queries.GetAllDonors;
 

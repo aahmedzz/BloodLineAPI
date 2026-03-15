@@ -1,4 +1,4 @@
-using BloodLineAPI.Domain.Enums;
+using BloodBankSystem.Domain.Enums;
 using MediatR;
 
 namespace BloodLineAPI.Application.Features.Donors.Commands.CreateDonor;

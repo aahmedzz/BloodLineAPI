@@ -1,13 +1,20 @@
-namespace BloodLineAPI.Domain.Enums;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-public enum BloodType
+namespace BloodBankSystem.Domain.Enums
 {
-    APositive,
-    ANegative,
-    BPositive,
-    BNegative,
-    ABPositive,
-    ABNegative,
-    OPositive,
-    ONegative
+    public enum BloodType
+    {
+        APositive,
+        ANegative,
+        BPositive,
+        BNegative,
+        ABPositive,
+        ABNegative,
+        OPositive,
+        ONegative
+    }
 }
