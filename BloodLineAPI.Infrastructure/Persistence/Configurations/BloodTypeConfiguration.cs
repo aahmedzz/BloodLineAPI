@@ -1,4 +1,4 @@
-﻿using BloodBankSystem.Domain.Entities.BloodEntities;
+using BloodLineAPI.Domain.Entities.BloodEntities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;
@@ -7,11 +7,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BloodBankSystem.Infrastructure.Persistence.Configurations
+namespace BloodLineAPI.Infrastructure.Persistence.Configurations
 {
-    public class BloodTypeEntityConfiguration : IEntityTypeConfiguration<BloodTypeEntity>
+    public class BloodTypeConfiguration : IEntityTypeConfiguration<BloodType>
     {
-        public void Configure(EntityTypeBuilder<BloodTypeEntity> builder)
+        public void Configure(EntityTypeBuilder<BloodType> builder)
         {
             builder.HasKey(bt => bt.Id);
             builder.Property(bt => bt.BloodGroupName).HasConversion<string>().IsRequired();

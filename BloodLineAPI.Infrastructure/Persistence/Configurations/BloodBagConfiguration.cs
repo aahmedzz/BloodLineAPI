@@ -1,4 +1,4 @@
-﻿using BloodBankSystem.Domain.Entities.BloodEntities;
+using BloodLineAPI.Domain.Entities.BloodEntities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BloodBankSystem.Infrastructure.Persistence.Configurations
+namespace BloodLineAPI.Infrastructure.Persistence.Configurations
 {
     public class BloodBagConfiguration : IEntityTypeConfiguration<BloodBag>
     {
@@ -18,9 +18,9 @@ namespace BloodBankSystem.Infrastructure.Persistence.Configurations
             builder.HasIndex(bb => bb.SerialNumber).IsUnique();
             builder.Property(bb => bb.Volume).HasPrecision(8, 2);
             builder.Property(bb => bb.Status).HasConversion<string>();
-            builder.HasOne(bb => bb.BloodTypeEntity)
+            builder.HasOne(bb => bb.BloodType)
                 .WithMany(bt => bt.BloodBags)
-                .HasForeignKey(bb => bb.BloodTypeEntityId)
+                .HasForeignKey(bb => bb.BloodTypeId)
                 .OnDelete(DeleteBehavior.Restrict);
             builder.HasOne(bb => bb.CollectedByStaff)
                 .WithMany(s => s.CollectedBloodBags)

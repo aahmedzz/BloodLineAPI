@@ -1,4 +1,4 @@
-﻿using BloodBankSystem.Domain.Entities;
+using BloodLineAPI.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BloodBankSystem.Infrastructure.Persistence.Configurations
+namespace BloodLineAPI.Infrastructure.Persistence.Configurations
 {
     public class MedicalScreeningConfiguration : IEntityTypeConfiguration<MedicalScreening>
     {

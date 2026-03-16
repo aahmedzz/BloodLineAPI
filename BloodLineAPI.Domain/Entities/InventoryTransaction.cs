@@ -1,4 +1,4 @@
-﻿namespace BloodBankSystem.Domain.Entities
+namespace BloodLineAPI.Domain.Entities
 {
     public class InventoryTransaction : AuditableEntity
     {

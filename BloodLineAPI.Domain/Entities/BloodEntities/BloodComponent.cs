@@ -1,4 +1,4 @@
-﻿namespace BloodBankSystem.Domain.Entities.BloodEntities
+namespace BloodLineAPI.Domain.Entities.BloodEntities
 {
     public class BloodComponent : AuditableEntity
     {

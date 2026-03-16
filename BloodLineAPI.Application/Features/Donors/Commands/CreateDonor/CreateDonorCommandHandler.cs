@@ -1,5 +1,5 @@
-using BloodBankSystem.Domain.Entities;
-using BloodBankSystem.Domain.Entities.BloodEntities;
+using BloodLineAPI.Domain.Entities;
+using BloodLineAPI.Domain.Entities.BloodEntities;
 using BloodLineAPI.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

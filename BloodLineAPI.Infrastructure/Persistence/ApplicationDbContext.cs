@@ -1,7 +1,7 @@
-using BloodBankSystem.Domain.Entities;
-using BloodBankSystem.Domain.Entities.BloodEntities;
-using BloodBankSystem.Domain.Entities.DonationEntities;
-using BloodBankSystem.Domain.Entities.Users;
+using BloodLineAPI.Domain.Entities;
+using BloodLineAPI.Domain.Entities.BloodEntities;
+using BloodLineAPI.Domain.Entities.DonationEntities;
+using BloodLineAPI.Domain.Entities.Users;
 using BloodLineAPI.Application.Common.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +15,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserRole> UserRoles { get; set; } = null!;
     public DbSet<Staff> Staff { get; set; } = null!;
     public DbSet<Donor> Donors { get; set; } = null!;
-    public DbSet<BloodTypeEntity> BloodTypes { get; set; } = null!;
+    public DbSet<BloodType> BloodTypes { get; set; } = null!;
     public DbSet<BloodBag> BloodBags { get; set; } = null!;
     public DbSet<BloodComponent> BloodComponents { get; set; } = null!;
     public DbSet<BloodTestResult> BloodTestResults { get; set; } = null!;

@@ -1,9 +1,9 @@
-﻿using BloodBankSystem.Domain.Entities.Users;
+using BloodLineAPI.Domain.Entities.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 
-namespace BloodBankSystem.Infrastructure.Persistence.Configurations
+namespace BloodLineAPI.Infrastructure.Persistence.Configurations
 {
     public class UserConfiguration : IEntityTypeConfiguration<User>
     {

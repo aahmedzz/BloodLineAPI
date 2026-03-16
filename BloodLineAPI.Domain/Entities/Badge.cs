@@ -1,5 +1,5 @@
-﻿
-namespace BloodBankSystem.Domain.Entities
+
+namespace BloodLineAPI.Domain.Entities
 {
     public class Badge : BaseEntity
     {

@@ -1,6 +1,6 @@
-﻿
 
-namespace BloodBankSystem.Domain.Entities
+
+namespace BloodLineAPI.Domain.Entities
 {
     public class DiscardRecord : AuditableEntity
     {

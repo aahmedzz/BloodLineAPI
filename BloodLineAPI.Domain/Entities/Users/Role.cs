@@ -1,4 +1,4 @@
-﻿namespace BloodBankSystem.Domain.Entities.Users
+namespace BloodLineAPI.Domain.Entities.Users
 {
     public class Role : BaseEntity
     {
