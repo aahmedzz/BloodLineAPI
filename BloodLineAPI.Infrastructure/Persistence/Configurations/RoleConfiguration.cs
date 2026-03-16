@@ -13,9 +13,10 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<Role> builder)
         {
-            builder.HasKey(r => r.Id);
-            builder.Property(r => r.RoleName).IsRequired().HasMaxLength(50);
-            builder.HasIndex(r => r.RoleName).IsUnique();
+            builder.HasMany(r => r.UserRoles)
+                .WithOne(ur => ur.Role)
+                .HasForeignKey(ur => ur.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

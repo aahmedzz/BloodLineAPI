@@ -1,10 +1,9 @@
+using Microsoft.AspNetCore.Identity;
+
 namespace BloodLineAPI.Domain.Entities.Users
 {
-    public class Role : BaseEntity
+    public class Role : IdentityRole<Guid>
     {
-        public string RoleName { get; set; } = string.Empty;
-
         public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
-
     }
 }

@@ -4,15 +4,13 @@ using BloodLineAPI.Domain.Entities.DonationEntities;
 using BloodLineAPI.Domain.Entities.Users;
 using BloodLineAPI.Application.Common.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore; using Microsoft.AspNetCore.Identity;
 
 namespace BloodLineAPI.Infrastructure.Persistence;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-    : DbContext(options), IApplicationDbContext
+    : IdentityDbContext<User, Role, Guid, IdentityUserClaim<Guid>, UserRole, IdentityUserLogin<Guid>, IdentityRoleClaim<Guid>, IdentityUserToken<Guid>>(options), IApplicationDbContext
 {
-    public DbSet<User> Users { get; set; } = null!;
-    public DbSet<Role> Roles { get; set; } = null!;
-    public DbSet<UserRole> UserRoles { get; set; } = null!;
     public DbSet<Staff> Staff { get; set; } = null!;
     public DbSet<Donor> Donors { get; set; } = null!;
     public DbSet<BloodType> BloodTypes { get; set; } = null!;
