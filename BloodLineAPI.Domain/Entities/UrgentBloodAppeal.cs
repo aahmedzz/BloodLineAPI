@@ -12,7 +12,7 @@
         public DateTime BroadcastDate { get; set; }
 
         public Staff CreatedByStaff { get; set; } = null!;
-        public ICollection<BloodTypeEntity> TargetedBloodTypes { get; set; } = new List<BloodTypeEntity>();
+        public ICollection<BloodType> TargetedBloodTypes { get; set; } = new List<BloodType>();
 
     }
 }

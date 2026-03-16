@@ -11,7 +11,7 @@
         public string District { get; set; } = string.Empty;
         public Gender Gender { get; set; }
         public string NationalId { get; set; } = string.Empty;
-        public BloodTypeEntity BloodType { get; set; }
+        public BloodType? BloodType { get; set; }
         public string PhoneNumber { get; set; } = string.Empty;
         public DateTime? LastDonationDate { get; set; }
         public int TotalPoints { get; set; } = 0;

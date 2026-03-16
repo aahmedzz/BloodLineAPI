@@ -15,10 +15,6 @@ public sealed class CreateDonorCommandHandler(IApplicationDbContext dbContext)
         var firstName = nameParts.Length > 0 ? nameParts[0] : request.FullName;
         var lastName = nameParts.Length > 1 ? nameParts[1] : string.Empty;
 
-        var bloodTypeEntity = await dbContext.BloodTypes
-            .FirstOrDefaultAsync(bt => bt.BloodGroupName == request.BloodType, cancellationToken)
-            ?? throw new InvalidOperationException($"BloodType '{request.BloodType}' not found in BloodTypes.");
-
         var donor = new Donor
         {
             Id = Guid.NewGuid(),
@@ -26,7 +22,6 @@ public sealed class CreateDonorCommandHandler(IApplicationDbContext dbContext)
             FirstName = firstName,
             LastName = lastName,
             DateOfBirth = request.DateOfBirth,
-            BloodType = bloodTypeEntity,
             PhoneNumber = request.PhoneNumber
         };
 

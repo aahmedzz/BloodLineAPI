@@ -18,7 +18,6 @@ public sealed class GetAllDonorsQueryHandler(IApplicationDbContext dbContext)
                 d.Id,
                 d.FirstName + " " + d.LastName,
                 d.DateOfBirth,
-                d.BloodType.BloodGroupName,
                 d.PhoneNumber))
             .ToListAsync(cancellationToken);
     }

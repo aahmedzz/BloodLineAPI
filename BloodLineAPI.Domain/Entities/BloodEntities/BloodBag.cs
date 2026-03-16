@@ -11,7 +11,7 @@
         public decimal Volume { get; set; }
         public BloodBagStatus Status { get; set; } = BloodBagStatus.Available;
 
-        public BloodTypeEntity BloodTypeEntity { get; set; } = null!;
+        public BloodType BloodTypeEntity { get; set; } = null!;
         public Staff CollectedByStaff { get; set; } = null!;
         public DonationAppointment? DonationAppointment { get; set; }
         public ICollection<BloodTestResult> BloodTestResults { get; set; } = new List<BloodTestResult>();
