@@ -17,8 +17,7 @@ public sealed class CreateDonorCommandHandler(IApplicationDbContext dbContext)
 
         var donor = new Donor
         {
-            Id = Guid.NewGuid(),
-            UserId = Guid.Empty,
+            Id = request.UserId,
             FirstName = firstName,
             LastName = lastName,
             DateOfBirth = request.DateOfBirth,

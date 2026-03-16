@@ -2,7 +2,6 @@ namespace BloodLineAPI.Domain.Entities
 {
     public class Staff :AuditableEntity
     {
-        public Guid UserId { get; set; }
         public string EmployeeIdentifier { get; set; } = string.Empty;
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;

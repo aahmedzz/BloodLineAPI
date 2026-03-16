@@ -9,10 +9,6 @@ namespace BloodLineAPI.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {
-
-    DbSet<User> Users { get; }
-    DbSet<Role> Roles { get; }
-    DbSet<UserRole> UserRoles { get; }
     DbSet<Staff> Staff { get; }
     DbSet<Donor> Donors { get; }
     DbSet<BloodType> BloodTypes { get; }

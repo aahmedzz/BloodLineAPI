@@ -29,7 +29,7 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
             builder.Property(d => d.Gender).HasConversion<string>();
             builder.HasOne(d => d.User)
                 .WithOne(u => u.Donor)
-                .HasForeignKey<Donor>(d => d.UserId)
+                .HasForeignKey<Donor>(d => d.Id)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

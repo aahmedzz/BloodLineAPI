@@ -21,7 +21,7 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
             builder.Property(s => s.DepartmentName).HasMaxLength(100);
             builder.HasOne(s => s.User)
                 .WithOne(u => u.Staff)
-                .HasForeignKey<Staff>(s => s.UserId)
+                .HasForeignKey<Staff>(s => s.Id)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

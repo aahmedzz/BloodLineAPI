@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore; using Microsoft.AspNetC
 namespace BloodLineAPI.Infrastructure.Persistence;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-    : IdentityDbContext<User, Role, Guid, IdentityUserClaim<Guid>, UserRole, IdentityUserLogin<Guid>, IdentityRoleClaim<Guid>, IdentityUserToken<Guid>>(options), IApplicationDbContext
+    : IdentityDbContext<User, Role, Guid>(options), IApplicationDbContext
 {
     public DbSet<Staff> Staff { get; set; } = null!;
     public DbSet<Donor> Donors { get; set; } = null!;
@@ -36,8 +36,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
-
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
     }
 }
