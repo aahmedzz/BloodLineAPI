@@ -4,7 +4,7 @@ using MediatR;
 namespace BloodLineAPI.Application.Features.Donors.Commands.CreateDonor;
 
 public sealed record CreateDonorCommand(
+    Guid UserId,
     string FullName,
     DateOnly DateOfBirth,
-    BloodType BloodType,
     string PhoneNumber) : IRequest<Guid>;

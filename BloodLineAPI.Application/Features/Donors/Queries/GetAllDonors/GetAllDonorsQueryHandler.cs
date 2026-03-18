@@ -13,11 +13,11 @@ public sealed class GetAllDonorsQueryHandler(IApplicationDbContext dbContext)
     {
         return await dbContext.Donors
             .AsNoTracking()
+            .Include(d => d.BloodType)
             .Select(d => new DonorDto(
                 d.Id,
-                d.FullName,
+                d.FirstName + " " + d.LastName,
                 d.DateOfBirth,
-                d.BloodType,
                 d.PhoneNumber))
             .ToListAsync(cancellationToken);
     }

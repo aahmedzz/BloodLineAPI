@@ -17,8 +17,5 @@ public sealed class CreateDonorCommandValidator : AbstractValidator<CreateDonorC
         RuleFor(x => x.DateOfBirth)
             .NotEmpty()
             .LessThan(DateOnly.FromDateTime(DateTime.UtcNow));
-
-        RuleFor(x => x.BloodType)
-            .IsInEnum();
     }
 }

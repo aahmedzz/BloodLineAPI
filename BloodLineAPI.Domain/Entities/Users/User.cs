@@ -1,0 +1,13 @@
+using Microsoft.AspNetCore.Identity;
+
+namespace BloodLineAPI.Domain.Entities.Users
+{
+    public class User : IdentityUser<Guid>
+    {
+        public bool IsDeleted { get; set; } = false;
+        public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+        public Donor? Donor { get; set; }
+        public Staff? Staff { get; set; }
+    }
+}
