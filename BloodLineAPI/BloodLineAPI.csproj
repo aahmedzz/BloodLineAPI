@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.1" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -25,6 +26,11 @@
   <ItemGroup>
     <ProjectReference Include="..\BloodLineAPI.Application\BloodLineAPI.Application.csproj" />
     <ProjectReference Include="..\BloodLineAPI.Infrastructure\BloodLineAPI.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Controllers\V1\Base\" />
+    <Folder Include="Controllers\V1\System\" />
   </ItemGroup>
 
 </Project>

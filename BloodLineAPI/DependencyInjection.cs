@@ -1,7 +1,14 @@
 using Asp.Versioning;
 using BloodLineAPI.Attributes;
+using BloodLineAPI.Domain.Entities.Users;
+using BloodLineAPI.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.OpenApi;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using System.Text;
 
 namespace BloodLineAPI;
 
@@ -9,9 +16,40 @@ public static class DependencyInjection
 {
     private static readonly string[] ApiVersions = ["v1"];
 
-    public static IServiceCollection AddPresentation(this IServiceCollection services)
+    public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddControllers();
+
+        services.AddIdentity<User, Role>()
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
+
+        var jwtSettings = configuration.GetSection("JwtSettings");
+        var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("Jwt Secret is not configured.");
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.RequireHttpsMetadata = false;
+            options.SaveToken = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+                ValidateIssuer = false,
+                ValidIssuer = jwtSettings["Issuer"],
+                ValidateAudience = false,
+                ValidAudience = jwtSettings["Audience"],
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+
+        services.AddAuthorization();
 
         services.AddApiVersioning(options =>
         {
