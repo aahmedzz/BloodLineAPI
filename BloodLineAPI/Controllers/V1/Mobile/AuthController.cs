@@ -1,8 +1,12 @@
 using Asp.Versioning;
+using BloodLineAPI.Application.Features.Auth.Commands.RefreshToken;
 using BloodLineAPI.Application.Features.Auth.Commands.RegisterMobileUser;
 using BloodLineAPI.Attributes;
 using MediatR;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using BloodLineAPI.Application.Common.Interfaces;
 
 namespace BloodLineAPI.Controllers.V1.Mobile;
 
@@ -10,9 +14,10 @@ namespace BloodLineAPI.Controllers.V1.Mobile;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/mobile/[controller]")]
 [ApiAudience(Audience.Mobile)]
-public class AuthController(ISender sender) : ControllerBase
+public class AuthController(ISender sender, IJwtGenerator jwtGenerator) : ControllerBase
 {
     private readonly ISender _sender = sender;
+    private readonly IJwtGenerator _jwtGenerator = jwtGenerator;
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterMobileUserCommand command, CancellationToken cancellationToken)
@@ -20,9 +25,45 @@ public class AuthController(ISender sender) : ControllerBase
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return BadRequest(new { Error = result.Error });
+            return Problem(title: "Bad Request", detail: result.Error, statusCode: StatusCodes.Status400BadRequest);
         }
-        
-        return Ok(new { Token = result.Data });
+
+        return Ok(result.Data);
+    }
+
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(command, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return Problem(title: "Bad Request", detail: result.Error, statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        return Ok(result.Data);
+    }
+
+    [HttpGet("test")]
+    [Authorize]
+    public IActionResult Test()
+    {
+        var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            return Problem(title: "Unauthorized", detail: "Missing or invalid authorization header.", statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        var token = authHeader.Substring("Bearer ".Length).Trim();
+
+        var principal = _jwtGenerator.GetPrincipalFromExpiredToken(token);
+        if (principal is null)
+        {
+            return Problem(title: "Bad Request", detail: "Invalid token.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var username = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value
+                       ?? principal.Identity?.Name;
+
+        return Ok(new { Username = username});
     }
 }

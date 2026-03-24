@@ -9,4 +9,4 @@ public sealed record RegisterMobileUserCommand(
     string NationalId,
     string PhoneNumber,
     string Password,
-    string ConfirmPassword) : IRequest<Result<string>>;
+    string ConfirmPassword) : IRequest<Result<DonorAuthResponse>>;

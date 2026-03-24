@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using BloodLineAPI.Attributes;
 using BloodLineAPI.Domain.Entities.Users;
 using BloodLineAPI.Infrastructure.Persistence;
@@ -81,6 +82,7 @@ public static class DependencyInjection
                     doc.Info.Description = $"BloodLine platform API {version} endpoints.\n\n{audienceDescription}";
                     return Task.CompletedTask;
                 });
+                AddJwtSecurity(options);
                 AddAudienceTagging(options);
             });
         }
@@ -103,6 +105,50 @@ public static class DependencyInjection
                 {
                     new(audienceAttr.Audience + " - " + controller)
                 };
+            }
+
+
+            return Task.CompletedTask;
+        });
+    }
+
+    private static void AddJwtSecurity(OpenApiOptions options)
+    {
+        options.AddDocumentTransformer((doc, ctx, ct) =>
+        {
+            doc.Components ??= new OpenApiComponents();
+            doc.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+
+            var scheme = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Name = "Authorization",
+                Description = "Enter: {JWT token} into the field below (without the 'Bearer' prefix)."
+            };
+
+            doc.Components.SecuritySchemes[JwtBearerDefaults.AuthenticationScheme] = scheme;
+
+            doc.Security ??= new List<OpenApiSecurityRequirement>();
+            doc.Security.Add(new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference(JwtBearerDefaults.AuthenticationScheme, doc)] = new List<string>()
+            });
+
+            return Task.CompletedTask;
+        });
+
+        options.AddOperationTransformer((operation, context, ct) =>
+        {
+            var metadata = context.Description.ActionDescriptor.EndpointMetadata;
+            var isAnonymous = metadata.OfType<IAllowAnonymous>().Any();
+            var requiresAuthorization = metadata.OfType<IAuthorizeData>().Any();
+
+            if (isAnonymous || !requiresAuthorization)
+            {
+                operation.Security = new List<OpenApiSecurityRequirement>();
             }
 
             return Task.CompletedTask;

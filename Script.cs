@@ -1,0 +1,1 @@
+using System; using System.Linq; using Microsoft.OpenApi.Models; class P { static void Main() { Console.WriteLine(String.Join(" \, typeof(OpenApiDocument).GetProperties().Select(p => p.Name))); Console.WriteLine(typeof(OpenApiSecurityScheme).GetProperties().Count()); } }
