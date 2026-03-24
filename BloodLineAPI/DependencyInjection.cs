@@ -1,7 +1,15 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using BloodLineAPI.Attributes;
+using BloodLineAPI.Domain.Entities.Users;
+using BloodLineAPI.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.OpenApi;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using System.Text;
 
 namespace BloodLineAPI;
 
@@ -9,9 +17,40 @@ public static class DependencyInjection
 {
     private static readonly string[] ApiVersions = ["v1"];
 
-    public static IServiceCollection AddPresentation(this IServiceCollection services)
+    public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddControllers();
+
+        services.AddIdentity<User, Role>()
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
+
+        var jwtSettings = configuration.GetSection("JwtSettings");
+        var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("Jwt Secret is not configured.");
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.RequireHttpsMetadata = false;
+            options.SaveToken = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+                ValidateIssuer = false,
+                ValidIssuer = jwtSettings["Issuer"],
+                ValidateAudience = false,
+                ValidAudience = jwtSettings["Audience"],
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+
+        services.AddAuthorization();
 
         services.AddApiVersioning(options =>
         {
@@ -43,6 +82,7 @@ public static class DependencyInjection
                     doc.Info.Description = $"BloodLine platform API {version} endpoints.\n\n{audienceDescription}";
                     return Task.CompletedTask;
                 });
+                AddJwtSecurity(options);
                 AddAudienceTagging(options);
             });
         }
@@ -65,6 +105,50 @@ public static class DependencyInjection
                 {
                     new(audienceAttr.Audience + " - " + controller)
                 };
+            }
+
+
+            return Task.CompletedTask;
+        });
+    }
+
+    private static void AddJwtSecurity(OpenApiOptions options)
+    {
+        options.AddDocumentTransformer((doc, ctx, ct) =>
+        {
+            doc.Components ??= new OpenApiComponents();
+            doc.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+
+            var scheme = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Name = "Authorization",
+                Description = "Enter: {JWT token} into the field below (without the 'Bearer' prefix)."
+            };
+
+            doc.Components.SecuritySchemes[JwtBearerDefaults.AuthenticationScheme] = scheme;
+
+            doc.Security ??= new List<OpenApiSecurityRequirement>();
+            doc.Security.Add(new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference(JwtBearerDefaults.AuthenticationScheme, doc)] = new List<string>()
+            });
+
+            return Task.CompletedTask;
+        });
+
+        options.AddOperationTransformer((operation, context, ct) =>
+        {
+            var metadata = context.Description.ActionDescriptor.EndpointMetadata;
+            var isAnonymous = metadata.OfType<IAllowAnonymous>().Any();
+            var requiresAuthorization = metadata.OfType<IAuthorizeData>().Any();
+
+            if (isAnonymous || !requiresAuthorization)
+            {
+                operation.Security = new List<OpenApiSecurityRequirement>();
             }
 
             return Task.CompletedTask;

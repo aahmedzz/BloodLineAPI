@@ -23,9 +23,9 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
             builder.Property(d => d.District).HasMaxLength(100);
             builder.HasOne(d => d.BloodType)
                 .WithMany(bt => bt.Donors)
-                .HasForeignKey("BloodTypeId")
+                .HasForeignKey(d => d.BloodTypeId)
                 .OnDelete(DeleteBehavior.Restrict)
-                .IsRequired();
+                .IsRequired(false);
             builder.Property(d => d.Gender).HasConversion<string>();
             builder.HasOne(d => d.User)
                 .WithOne(u => u.Donor)

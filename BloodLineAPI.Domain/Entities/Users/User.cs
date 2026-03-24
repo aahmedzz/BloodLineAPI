@@ -4,6 +4,8 @@ namespace BloodLineAPI.Domain.Entities.Users
 {
     public class User : IdentityUser<Guid>
     {
+        public string? RefreshToken { get; set; }
+        public DateTime? RefreshTokenExpiryTime { get; set; }
         public bool IsDeleted { get; set; } = false;
         public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();

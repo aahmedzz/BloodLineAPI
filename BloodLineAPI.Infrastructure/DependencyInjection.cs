@@ -1,5 +1,6 @@
 using BloodLineAPI.Application.Common.Interfaces;
 using BloodLineAPI.Domain.Repositories;
+using BloodLineAPI.Infrastructure.Authentication;
 using BloodLineAPI.Infrastructure.Persistence;
 using BloodLineAPI.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,7 @@ public static class DependencyInjection
             sp.GetRequiredService<ApplicationDbContext>());
 
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+        services.AddScoped<IJwtGenerator, JwtGenerator>();
 
         return services;
     }
