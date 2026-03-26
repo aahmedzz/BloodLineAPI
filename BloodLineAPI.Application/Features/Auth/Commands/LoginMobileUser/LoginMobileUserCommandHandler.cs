@@ -18,19 +18,16 @@ public sealed class LoginMobileUserCommandHandler(
     public async Task<Result<DonorAuthResponse>> Handle(LoginMobileUserCommand request, CancellationToken cancellationToken)
     {
         var identifier = request.Identifier?.Trim();
-        var password = request.Password ?? string.Empty;
+        var password = request.Password;
 
-        if (string.IsNullOrEmpty(identifier) || string.IsNullOrEmpty(password))
+        if (string.IsNullOrWhiteSpace(identifier) || string.IsNullOrWhiteSpace(password))
             return Result<DonorAuthResponse>.Failure("Identifier and password are required.");
 
         try
         {
-            var user = await userManager.FindByNameAsync(identifier);
-            if (user == null)
-            {
-                user = await userManager.Users
-                    .FirstOrDefaultAsync(u => u.PhoneNumber == identifier, cancellationToken);
-            }
+            var normalizedIdentifier = userManager.NormalizeName(identifier);
+            var user = await userManager.Users
+                .FirstOrDefaultAsync(u => u.NormalizedUserName == normalizedIdentifier || u.PhoneNumber == identifier, cancellationToken);
 
             if (user == null || user.IsDeleted)
                 return Result<DonorAuthResponse>.Failure("Invalid credentials.");
@@ -43,8 +40,6 @@ public sealed class LoginMobileUserCommandHandler(
                 return Result<DonorAuthResponse>.Failure("Invalid credentials. If you forgot your password, use the forgot-password to reset it.");
             }
 
-            var roles = await userManager.GetRolesAsync(user) ?? Enumerable.Empty<string>();
-            var accessToken = jwtGenerator.GenerateToken(user, roles);
             var refreshToken = jwtGenerator.GenerateRefreshToken();
 
             user.RefreshToken = refreshToken;
@@ -57,6 +52,9 @@ public sealed class LoginMobileUserCommandHandler(
                 logger.LogError("Failed to update user {UserId} refresh token: {Errors}", user.Id, errors);
                 return Result<DonorAuthResponse>.Failure("An error occurred while updating user data.");
             }
+
+            var roles = await userManager.GetRolesAsync(user) ?? Enumerable.Empty<string>();
+            var accessToken = jwtGenerator.GenerateToken(user, roles);
 
             logger.LogInformation("User {UserId} logged in successfully.", user.Id);
             return Result<DonorAuthResponse>.Success(new DonorAuthResponse(accessToken, refreshToken));

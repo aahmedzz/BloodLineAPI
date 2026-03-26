@@ -18,7 +18,6 @@ namespace BloodLineAPI.Controllers.V1.Mobile;
 public class AuthController(ISender sender, IJwtGenerator jwtGenerator) : ControllerBase
 {
     private readonly ISender _sender = sender;
-    private readonly IJwtGenerator _jwtGenerator = jwtGenerator;
    
 
     [HttpPost("register")]
@@ -52,29 +51,5 @@ public class AuthController(ISender sender, IJwtGenerator jwtGenerator) : Contro
         }
 
         return Ok(result.Data);
-    }
-
-    [HttpGet("test")]
-    [Authorize]
-    public IActionResult Test()
-    {
-        var authHeader = Request.Headers["Authorization"].FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            return Problem(title: "Unauthorized", detail: "Missing or invalid authorization header.", statusCode: StatusCodes.Status401Unauthorized);
-        }
-
-        var token = authHeader.Substring("Bearer ".Length).Trim();
-
-        var principal = _jwtGenerator.GetPrincipalFromExpiredToken(token);
-        if (principal is null)
-        {
-            return Problem(title: "Bad Request", detail: "Invalid token.", statusCode: StatusCodes.Status400BadRequest);
-        }
-
-        var username = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value
-                       ?? principal.Identity?.Name;
-
-        return Ok(new { Username = username});
     }
 }
