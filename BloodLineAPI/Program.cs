@@ -15,14 +15,14 @@ var app = builder.Build();
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
-{
+//if (app.Environment.IsDevelopment())
+//{
     app.MapOpenApi();
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/openapi/v1.json", "BloodLine API v1");
     });
-}
+//}
 
 app.UseHttpsRedirection();
 app.UseAuthentication();
