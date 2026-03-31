@@ -59,6 +59,30 @@ public class JwtGenerator : IJwtGenerator
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    public string GenerateTemporaryToken(User user)
+    {
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Name, user.UserName ?? string.Empty),
+            new("Scope", "Registration")
+        };
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: _issuer,
+            audience: _audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(30), // Short lived token
+            signingCredentials: creds);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
     public string GenerateRefreshToken()
     {
         var randomBytes = new byte[64];

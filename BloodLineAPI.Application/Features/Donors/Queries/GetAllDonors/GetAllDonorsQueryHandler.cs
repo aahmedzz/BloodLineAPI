@@ -16,7 +16,7 @@ public sealed class GetAllDonorsQueryHandler(IApplicationDbContext dbContext)
             .Include(d => d.BloodType)
             .Select(d => new DonorDto(
                 d.Id,
-                d.FirstName + " " + d.LastName,
+                d.FullName,
                 d.DateOfBirth,
                 d.PhoneNumber))
             .ToListAsync(cancellationToken);

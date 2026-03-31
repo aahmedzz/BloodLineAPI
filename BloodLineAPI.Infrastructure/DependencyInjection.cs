@@ -1,6 +1,7 @@
 using BloodLineAPI.Application.Common.Interfaces;
 using BloodLineAPI.Domain.Repositories;
 using BloodLineAPI.Infrastructure.Authentication;
+using BloodLineAPI.Infrastructure.Messaging;
 using BloodLineAPI.Infrastructure.Persistence;
 using BloodLineAPI.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,15 @@ public static class DependencyInjection
 
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<IJwtGenerator, JwtGenerator>();
+        services.Configure<WaSenderApiOptions>(configuration.GetSection("WaSenderApi"));
+        services.AddHttpClient<IWhatsappMessageSender, WaSenderApiWhatsappMessageSender>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<WaSenderApiOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(options.BaseUrl))
+            {
+                client.BaseAddress = new Uri(options.BaseUrl);
+            }
+        });
 
         return services;
     }

@@ -4,9 +4,8 @@ using MediatR;
 namespace BloodLineAPI.Application.Features.Auth.Commands.RegisterMobileUser;
 
 public sealed record RegisterMobileUserCommand(
-    string FirstName,
-    string LastName,
+    string FullName,
     string NationalId,
     string PhoneNumber,
     string Password,
-    string ConfirmPassword) : IRequest<Result<DonorAuthResponse>>;
+    string ConfirmPassword) : IRequest<Result<RegisterMobileUserResponse>>;

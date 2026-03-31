@@ -4,6 +4,7 @@ using BloodLineAPI.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BloodLineAPI.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260330141246_OtpAndNameFieldsModification")]
+    partial class OtpAndNameFieldsModification
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -57,8 +60,8 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<byte>("BloodTypeId")
-                        .HasColumnType("tinyint");
+                    b.Property<Guid>("BloodTypeId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("CollectedByStaffId")
                         .HasColumnType("uniqueidentifier");
@@ -212,8 +215,9 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.BloodEntities.BloodType", b =>
                 {
-                    b.Property<byte>("Id")
-                        .HasColumnType("tinyint");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("BloodGroupName")
                         .IsRequired()
@@ -229,56 +233,6 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("BloodTypes");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = (byte)1,
-                            BloodGroupName = "A",
-                            RhFactor = "Positive"
-                        },
-                        new
-                        {
-                            Id = (byte)2,
-                            BloodGroupName = "A",
-                            RhFactor = "Negative"
-                        },
-                        new
-                        {
-                            Id = (byte)3,
-                            BloodGroupName = "B",
-                            RhFactor = "Positive"
-                        },
-                        new
-                        {
-                            Id = (byte)4,
-                            BloodGroupName = "B",
-                            RhFactor = "Negative"
-                        },
-                        new
-                        {
-                            Id = (byte)5,
-                            BloodGroupName = "AB",
-                            RhFactor = "Positive"
-                        },
-                        new
-                        {
-                            Id = (byte)6,
-                            BloodGroupName = "AB",
-                            RhFactor = "Negative"
-                        },
-                        new
-                        {
-                            Id = (byte)7,
-                            BloodGroupName = "O",
-                            RhFactor = "Positive"
-                        },
-                        new
-                        {
-                            Id = (byte)8,
-                            BloodGroupName = "O",
-                            RhFactor = "Negative"
-                        });
                 });
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.DiscardRecord", b =>
@@ -505,8 +459,8 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Property<bool>("AllowLeaderboardVisibility")
                         .HasColumnType("bit");
 
-                    b.Property<byte?>("BloodTypeId")
-                        .HasColumnType("tinyint");
+                    b.Property<Guid?>("BloodTypeId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("City")
                         .IsRequired()
@@ -1013,8 +967,8 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
             modelBuilder.Entity("BloodTypeUrgentBloodAppeal", b =>
                 {
-                    b.Property<byte>("TargetedBloodTypesId")
-                        .HasColumnType("tinyint");
+                    b.Property<Guid>("TargetedBloodTypesId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("UrgentBloodAppealsId")
                         .HasColumnType("uniqueidentifier");

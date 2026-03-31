@@ -13,6 +13,7 @@ public sealed class LoginMobileUserCommandHandler(
     UserManager<User> userManager,
     SignInManager<User> signInManager,
     IJwtGenerator jwtGenerator,
+    IApplicationDbContext dbContext,
     ILogger<LoginMobileUserCommandHandler> logger) : IRequestHandler<LoginMobileUserCommand, Result<DonorAuthResponse>>
 {
     public async Task<Result<DonorAuthResponse>> Handle(LoginMobileUserCommand request, CancellationToken cancellationToken)
@@ -32,12 +33,35 @@ public sealed class LoginMobileUserCommandHandler(
             if (user == null || user.IsDeleted)
                 return Result<DonorAuthResponse>.Failure("Invalid credentials.");
 
+            if (!user.PhoneNumberConfirmed)
+                return Result<DonorAuthResponse>.Failure("Please verify your phone number first.");
+
             var signInResult = await signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: false);
 
             if (!signInResult.Succeeded)
             {
                 logger.LogWarning("Invalid login attempt for identifier {Identifier}", identifier);
                 return Result<DonorAuthResponse>.Failure("Invalid credentials. If you forgot your password, use the forgot-password to reset it.");
+            }
+
+            var donor = await dbContext.Donors
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.Id == user.Id, cancellationToken);
+
+            var isRegistrationCompleted = donor?.IsRegistrationCompleted == true;
+            var userPayload = new AuthenticatedMobileUser(
+                user.Id,
+                user.UserName ?? string.Empty,
+                user.PhoneNumber ?? string.Empty,
+                donor?.FullName ?? string.Empty,
+                user.PhoneNumberConfirmed,
+                isRegistrationCompleted);
+
+            if (!isRegistrationCompleted)
+            {
+                var temporaryToken = jwtGenerator.GenerateTemporaryToken(user);
+                var pendingResponse = new DonorAuthResponse(temporaryToken, string.Empty, userPayload);
+                return Result<DonorAuthResponse>.Failure("Please complete your registration profile first.", pendingResponse);
             }
 
             var refreshToken = jwtGenerator.GenerateRefreshToken();
@@ -57,7 +81,7 @@ public sealed class LoginMobileUserCommandHandler(
             var accessToken = jwtGenerator.GenerateToken(user, roles);
 
             logger.LogInformation("User {UserId} logged in successfully.", user.Id);
-            return Result<DonorAuthResponse>.Success(new DonorAuthResponse(accessToken, refreshToken));
+            return Result<DonorAuthResponse>.Success(new DonorAuthResponse(accessToken, refreshToken, userPayload));
         }
         catch (Exception ex)
         {
