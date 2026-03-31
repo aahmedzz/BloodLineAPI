@@ -2,8 +2,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BloodLineAPI.Domain.Entities.BloodEntities
 {
-    public class BloodType : BaseEntity
+    public class BloodType
     {
+        public byte Id { get; set; }
         public BloodGroupName BloodGroupName { get; set; }
         public RhFactor RhFactor { get; set; }
 

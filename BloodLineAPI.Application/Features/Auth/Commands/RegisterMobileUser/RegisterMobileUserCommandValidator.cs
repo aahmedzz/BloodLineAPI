@@ -6,13 +6,10 @@ public sealed class RegisterMobileUserCommandValidator : AbstractValidator<Regis
 {
     public RegisterMobileUserCommandValidator()
     {
-        RuleFor(x => x.FirstName)
-            .NotEmpty().WithMessage("First name is required.")
-            .MaximumLength(100).WithMessage("First name must not exceed 100 characters.");
-
-        RuleFor(x => x.LastName)
-            .NotEmpty().WithMessage("Last name is required.")
-            .MaximumLength(100).WithMessage("Last name must not exceed 100 characters.");
+        RuleFor(x => x.FullName)
+            .NotEmpty().WithMessage("Full name is required.")
+            .Must(HaveAtLeastThreeNames).WithMessage("Full name must include at least 3 names.")
+            .MaximumLength(400).WithMessage("Full name must not exceed 400 characters.");
 
         RuleFor(x => x.NationalId)
             .NotEmpty().WithMessage("National ID is required.")
@@ -28,5 +25,16 @@ public sealed class RegisterMobileUserCommandValidator : AbstractValidator<Regis
 
         RuleFor(x => x.ConfirmPassword)
             .Equal(x => x.Password).WithMessage("Passwords do not match.");
+    }
+
+    private static bool HaveAtLeastThreeNames(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            return false;
+        }
+
+        var names = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return names.Length >= 3;
     }
 }

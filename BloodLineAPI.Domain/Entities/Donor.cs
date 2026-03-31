@@ -3,19 +3,25 @@ namespace BloodLineAPI.Domain.Entities
     public class Donor : AuditableEntity
     {
         public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
+        public string SecondName { get; set; } = string.Empty;
+        public string ThirdName { get; set; } = string.Empty;
+        public string? FourthName { get; set; }
         public DateOnly DateOfBirth { get; set; }
         public string Address { get; set; } = string.Empty;
         public string City { get; set; } = string.Empty;
         public string District { get; set; } = string.Empty;
         public Gender Gender { get; set; }
         public string NationalId { get; set; } = string.Empty;
-        public Guid? BloodTypeId { get; set; }
+        public byte? BloodTypeId { get; set; }
         public BloodType? BloodType { get; set; }
         public string PhoneNumber { get; set; } = string.Empty;
+        public decimal? WeightKg { get; set; }
+        public bool IsRegistrationCompleted { get; set; } = false;
         public DateTime? LastDonationDate { get; set; }
         public int TotalPoints { get; set; } = 0;
         public bool AllowLeaderboardVisibility { get; set; } = true;
+        public string FullName => string.Join(" ", new[] { FirstName, SecondName, ThirdName, FourthName }
+            .Where(static n => !string.IsNullOrWhiteSpace(n)));
 
         public User User { get; set; } = null!;
         public ICollection<DonationAppointment> DonationAppointments { get; set; } = new List<DonationAppointment>();

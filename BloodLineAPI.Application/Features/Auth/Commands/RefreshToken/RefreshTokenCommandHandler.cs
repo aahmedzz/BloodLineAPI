@@ -3,12 +3,14 @@ using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Domain.Entities.Users;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace BloodLineAPI.Application.Features.Auth.Commands.RefreshToken;
 
 public sealed class RefreshTokenCommandHandler(
     UserManager<User> userManager,
+    IApplicationDbContext dbContext,
     IJwtGenerator jwtGenerator) 
     : IRequestHandler<RefreshTokenCommand, Result<DonorAuthResponse>>
 {
@@ -36,6 +38,15 @@ public sealed class RefreshTokenCommandHandler(
         user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
         await userManager.UpdateAsync(user);
 
-        return Result<DonorAuthResponse>.Success(new DonorAuthResponse(newAccessToken, newRefreshToken));
+        var donor = await dbContext.Donors.FirstOrDefaultAsync(d => d.Id == user.Id, cancellationToken);
+        var userPayload = new AuthenticatedMobileUser(
+            user.Id,
+            user.UserName ?? string.Empty,
+            user.PhoneNumber ?? string.Empty,
+            donor?.FullName ?? string.Empty,
+            user.PhoneNumberConfirmed,
+            donor?.IsRegistrationCompleted ?? false);
+
+        return Result<DonorAuthResponse>.Success(new DonorAuthResponse(newAccessToken, newRefreshToken, userPayload));
     }
 }
