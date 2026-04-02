@@ -38,7 +38,7 @@ public sealed class RegisterMobileUserCommandHandler(
             return Result<RegisterMobileUserResponse>.Failure("Phone number is already registered.");
         }
 
-        var otpCode = RandomNumberGenerator.GetInt32(1000, 10000).ToString();
+        var otpCode = "1234"; // TODO: Remove this temporary code when WhatsApp service is upgraded
 
         var user = new User
         {
@@ -78,11 +78,12 @@ public sealed class RegisterMobileUserCommandHandler(
         await dbContext.Donors.AddAsync(donor, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var otpSent = await whatsappOtpSender.SendVerificationOtpAsync(request.PhoneNumber, otpCode, cancellationToken);
-        if (!otpSent)
-        {
-            return Result<RegisterMobileUserResponse>.Failure("Account created but failed to send verification code. Please try resending the code.");
-        }
+        // TODO: Uncomment when WhatsApp service is upgraded
+        // var otpSent = await whatsappOtpSender.SendVerificationOtpAsync(request.PhoneNumber, otpCode, cancellationToken);
+        // if (!otpSent)
+        // {
+        //     return Result<RegisterMobileUserResponse>.Failure("Account created but failed to send verification code. Please try resending the code.");
+        // }
 
         var userPayload = new AuthenticatedMobileUser(
             user.Id,

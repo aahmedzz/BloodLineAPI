@@ -35,16 +35,15 @@ public class AuthController(ISender sender) : ControllerBase
     /// **Flow:** Register → Verify OTP → Complete Profile → Login
     /// </remarks>
     [HttpPost("register")]
-    [ProducesResponseType(typeof(RegisterMobileUserResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<RegisterMobileUserResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Register([FromBody] RegisterMobileUserCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return Problem(title: "Bad Request", detail: result.Error, statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest(ApiResponse.Fail(result.Error!));
         }
 
         return Ok(result.Data);
@@ -60,16 +59,15 @@ public class AuthController(ISender sender) : ControllerBase
     /// **Flow:** Register → **Verify OTP** → Complete Profile → Login
     /// </remarks>
     [HttpPost("verify-otp")]
-    [ProducesResponseType(typeof(VerifyOtpResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<VerifyOtpResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> VerifyOtp([FromBody] VerifyMobileRegistrationOtpCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return Problem(title: "Bad Request", detail: result.Error, statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest(ApiResponse.Fail(result.Error!));
         }
 
         return Ok(new VerifyOtpResponse(result.Data!));
@@ -87,23 +85,22 @@ public class AuthController(ISender sender) : ControllerBase
     /// </remarks>
     [Authorize]
     [HttpPost("complete-profile")]
-    [ProducesResponseType(typeof(DonorAuthResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<DonorAuthResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CompleteProfile([FromBody] CompleteMobileRegistrationProfileCommand command, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdClaim, out var userId))
         {
-            return Unauthorized();
+            return Unauthorized(ApiResponse.Fail("Invalid or missing authentication token."));
         }
 
         var result = await _sender.Send(command with { UserId = userId }, cancellationToken);
         if (!result.IsSuccess)
         {
-            return Problem(title: "Bad Request", detail: result.Error, statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest(ApiResponse.Fail(result.Error!));
         }
 
         return Ok(result.Data);
@@ -116,43 +113,13 @@ public class AuthController(ISender sender) : ControllerBase
     /// Authenticates the user and returns JWT access token, refresh token, and user info.
     /// 
     /// **Note:** If the user has not completed their registration profile, the response will be 
-    /// a 400 error with `data` containing a temporary token and user info. The Flutter Dev should 
+    /// a 400 error with `data` containing the partial auth info. The Flutter client should 
     /// redirect the user to the complete-profile screen.
-    /// 
-    /// **Success Response (200):**
-    /// ```json
-    /// {
-    ///   "token": "eyJ...",
-    ///   "refreshToken": "abc...",
-    ///   "user": {
-    ///     "userId": "guid",
-    ///     "nationalId": "...",
-    ///     "phoneNumber": "...",
-    ///     "fullName": "...",
-    ///     "isPhoneNumberVerified": true,
-    ///     "isRegistrationCompleted": true
-    ///   }
-    /// }
-    /// ```
-    /// 
-    /// **Incomplete Registration Response (400):**
-    /// ```json
-    /// {
-    ///   "message": "Please complete your registration profile first.",
-    ///   "data": {
-    ///     "token": "temporary-token",
-    ///     "refreshToken": "",
-    ///     "user": { ... }
-    ///   }
-    /// }
-    /// ```
     /// </remarks>
     [HttpPost("Login")]
-    [ProducesResponseType(typeof(DonorAuthResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(LoginFailureResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<DonorAuthResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Login([FromBody] LoginMobileUserCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
@@ -160,10 +127,10 @@ public class AuthController(ISender sender) : ControllerBase
         {
             if (result.Data is not null)
             {
-                return BadRequest(new LoginFailureResponse(result.Error!, result.Data));
+                return BadRequest(ApiResponse.FailWithData(result.Error!, result.Data));
             }
 
-            return Problem(title: "Bad Request", detail: result.Error, statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest(ApiResponse.Fail(result.Error!));
         }
         return Ok(result.Data);
     }
@@ -176,16 +143,15 @@ public class AuthController(ISender sender) : ControllerBase
     /// Both the access token and refresh token are rotated.
     /// </remarks>
     [HttpPost("refresh-token")]
-    [ProducesResponseType(typeof(DonorAuthResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<DonorAuthResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return Problem(title: "Bad Request", detail: result.Error, statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest(ApiResponse.Fail(result.Error!));
         }
 
         return Ok(result.Data);
@@ -200,19 +166,18 @@ public class AuthController(ISender sender) : ControllerBase
     /// **Flow:** Forgot Password → Verify Reset OTP → Reset Password
     /// </remarks>
     [HttpPost("forgot-password")]
-    [ProducesResponseType(typeof(MessageResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotMobilePasswordCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return Problem(title: "Bad Request", detail: result.Error, statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest(ApiResponse.Fail(result.Error!));
         }
 
-        return Ok(new MessageResponse(result.Data!));
+        return Ok(ApiResponse.Ok(message: result.Data!));
     }
 
     /// <summary>
@@ -225,22 +190,21 @@ public class AuthController(ISender sender) : ControllerBase
     /// **Flow:** Forgot Password → **Verify Reset OTP** → Reset Password
     /// </remarks>
     [HttpPost("verify-reset-otp")]
-    [ProducesResponseType(typeof(VerifyResetOtpResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<VerifyResetOtpResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> VerifyResetOtp([FromBody] VerifyForgotPasswordOtpCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return Problem(title: "Bad Request", detail: result.Error, statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest(ApiResponse.Fail(result.Error!));
         }
 
         var parts = result.Data?.Split('|', 2) ?? Array.Empty<string>();
         if (parts.Length != 2)
         {
-            return Problem(title: "Bad Request", detail: "Invalid reset token response.", statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest(ApiResponse.Fail("Invalid reset token response."));
         }
 
         return Ok(new VerifyResetOtpResponse(parts[0], parts[1]));
@@ -255,19 +219,18 @@ public class AuthController(ISender sender) : ControllerBase
     /// **Flow:** Forgot Password → Verify Reset OTP → **Reset Password**
     /// </remarks>
     [HttpPost("reset-password")]
-    [ProducesResponseType(typeof(MessageResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetMobilePasswordCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return Problem(title: "Bad Request", detail: result.Error, statusCode: StatusCodes.Status400BadRequest);
+            return BadRequest(ApiResponse.Fail(result.Error!));
         }
 
-        return Ok(new MessageResponse(result.Data!));
+        return Ok(ApiResponse.Ok(message: result.Data!));
     }
 
 }

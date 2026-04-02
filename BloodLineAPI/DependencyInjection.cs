@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using BloodLineAPI.Attributes;
 using BloodLineAPI.Domain.Entities.Users;
+using BloodLineAPI.Filters;
 using BloodLineAPI.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -19,7 +20,10 @@ public static class DependencyInjection
 
     public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddControllers().AddJsonOptions(options =>
+        services.AddControllers(options =>
+        {
+            options.Filters.Add<ApiResponseWrapperFilter>();
+        }).AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
         });

@@ -37,7 +37,7 @@ public sealed class ForgotMobilePasswordCommandHandler(
             return Result<string>.Failure("Phone number is missing.");
         }
 
-        var otpCode = RandomNumberGenerator.GetInt32(1000, 10000).ToString();
+        var otpCode = "1234"; // TODO: Remove this temporary code when WhatsApp service is upgraded
         user.RegistrationOtpCode = otpCode;
         user.RegistrationOtpExpiryTime = DateTime.UtcNow.AddMinutes(10);
 
@@ -48,11 +48,12 @@ public sealed class ForgotMobilePasswordCommandHandler(
             return Result<string>.Failure(errors);
         }
 
-        var otpSent = await whatsappMessageSender.SendVerificationOtpAsync(user.PhoneNumber, otpCode, cancellationToken);
-        if (!otpSent)
-        {
-            return Result<string>.Failure("Failed to send verification code. Please try again.");
-        }
+        // TODO: Uncomment when WhatsApp service is upgraded
+        // var otpSent = await whatsappMessageSender.SendVerificationOtpAsync(user.PhoneNumber, otpCode, cancellationToken);
+        // if (!otpSent)
+        // {
+        //     return Result<string>.Failure("Failed to send verification code. Please try again.");
+        // }
 
         return Result<string>.Success("Verification code sent to your WhatsApp number.");
     }
