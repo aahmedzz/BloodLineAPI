@@ -36,17 +36,17 @@ public class AuthController(ISender sender) : ControllerBase
     /// </remarks>
     [HttpPost("register")]
     [ProducesResponseType(typeof(ApiResponse<RegisterMobileUserResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Register([FromBody] RegisterMobileUserCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return BadRequest(ApiResponse.Fail(result.Error!));
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
         }
 
-        return Ok(result.Data);
+        return Ok(ApiResponse<RegisterMobileUserResponse>.Ok(result.Data!));
     }
 
     /// <summary>
@@ -60,17 +60,17 @@ public class AuthController(ISender sender) : ControllerBase
     /// </remarks>
     [HttpPost("verify-otp")]
     [ProducesResponseType(typeof(ApiResponse<VerifyOtpResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> VerifyOtp([FromBody] VerifyMobileRegistrationOtpCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return BadRequest(ApiResponse.Fail(result.Error!));
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
         }
 
-        return Ok(new VerifyOtpResponse(result.Data!));
+        return Ok(ApiResponse<VerifyOtpResponse>.Ok(new VerifyOtpResponse(result.Data!)));
     }
 
     /// <summary>
@@ -86,24 +86,24 @@ public class AuthController(ISender sender) : ControllerBase
     [Authorize]
     [HttpPost("complete-profile")]
     [ProducesResponseType(typeof(ApiResponse<DonorAuthResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CompleteProfile([FromBody] CompleteMobileRegistrationProfileCommand command, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdClaim, out var userId))
         {
-            return Unauthorized(ApiResponse.Fail("Invalid or missing authentication token."));
+            return Unauthorized(ApiResponse<object>.Fail("Invalid or missing authentication token."));
         }
 
         var result = await _sender.Send(command with { UserId = userId }, cancellationToken);
         if (!result.IsSuccess)
         {
-            return BadRequest(ApiResponse.Fail(result.Error!));
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
         }
 
-        return Ok(result.Data);
+        return Ok(ApiResponse<DonorAuthResponse>.Ok(result.Data!));
     }
 
     /// <summary>
@@ -118,8 +118,8 @@ public class AuthController(ISender sender) : ControllerBase
     /// </remarks>
     [HttpPost("Login")]
     [ProducesResponseType(typeof(ApiResponse<DonorAuthResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<DonorAuthResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Login([FromBody] LoginMobileUserCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
@@ -127,12 +127,12 @@ public class AuthController(ISender sender) : ControllerBase
         {
             if (result.Data is not null)
             {
-                return BadRequest(ApiResponse.FailWithData(result.Error!, result.Data));
+                return BadRequest(ApiResponse<DonorAuthResponse>.FailWithData(result.Error!, result.Data));
             }
 
-            return BadRequest(ApiResponse.Fail(result.Error!));
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
         }
-        return Ok(result.Data);
+        return Ok(ApiResponse<DonorAuthResponse>.Ok(result.Data!));
     }
 
     /// <summary>
@@ -144,17 +144,17 @@ public class AuthController(ISender sender) : ControllerBase
     /// </remarks>
     [HttpPost("refresh-token")]
     [ProducesResponseType(typeof(ApiResponse<DonorAuthResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return BadRequest(ApiResponse.Fail(result.Error!));
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
         }
 
-        return Ok(result.Data);
+        return Ok(ApiResponse<DonorAuthResponse>.Ok(result.Data!));
     }
 
     /// <summary>
@@ -167,17 +167,17 @@ public class AuthController(ISender sender) : ControllerBase
     /// </remarks>
     [HttpPost("forgot-password")]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotMobilePasswordCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return BadRequest(ApiResponse.Fail(result.Error!));
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
         }
 
-        return Ok(ApiResponse.Ok(message: result.Data!));
+        return Ok(ApiResponse<object>.Ok(null!, message: result.Data!));
     }
 
     /// <summary>
@@ -191,23 +191,23 @@ public class AuthController(ISender sender) : ControllerBase
     /// </remarks>
     [HttpPost("verify-reset-otp")]
     [ProducesResponseType(typeof(ApiResponse<VerifyResetOtpResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> VerifyResetOtp([FromBody] VerifyForgotPasswordOtpCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return BadRequest(ApiResponse.Fail(result.Error!));
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
         }
 
         var parts = result.Data?.Split('|', 2) ?? Array.Empty<string>();
         if (parts.Length != 2)
         {
-            return BadRequest(ApiResponse.Fail("Invalid reset token response."));
+            return BadRequest(ApiResponse<object>.Fail("Invalid reset token response."));
         }
 
-        return Ok(new VerifyResetOtpResponse(parts[0], parts[1]));
+        return Ok(ApiResponse<VerifyResetOtpResponse>.Ok(new VerifyResetOtpResponse(parts[0], parts[1])));
     }
 
     /// <summary>
@@ -220,17 +220,17 @@ public class AuthController(ISender sender) : ControllerBase
     /// </remarks>
     [HttpPost("reset-password")]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetMobilePasswordCommand command, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
-            return BadRequest(ApiResponse.Fail(result.Error!));
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
         }
 
-        return Ok(ApiResponse.Ok(message: result.Data!));
+        return Ok(ApiResponse<object>.Ok(null!, message: result.Data!));
     }
 
 }

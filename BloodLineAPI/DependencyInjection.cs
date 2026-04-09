@@ -91,6 +91,7 @@ public static class DependencyInjection
                 });
                 AddJwtSecurity(options);
                 AddAudienceTagging(options);
+                AddApiResponseSchemaFix(options);
             });
         }
 
@@ -160,5 +161,77 @@ public static class DependencyInjection
 
             return Task.CompletedTask;
         });
+    }
+
+    /// <summary>
+    /// Fixes the OpenAPI schema so that Swagger UI shows the full typed data structure
+    /// in Example Value instead of null. The .NET OpenAPI generator creates oneOf [null, $ref]
+    /// for nullable generic type parameters, which Swagger UI renders as the first option (null).
+    /// This transformer replaces that pattern with just the $ref so the example is useful.
+    /// </summary>
+    private static void AddApiResponseSchemaFix(OpenApiOptions options)
+    {
+        options.AddDocumentTransformer((doc, ctx, ct) =>
+        {
+            if (doc.Components?.Schemas is null)
+                return Task.CompletedTask;
+
+            foreach (var (schemaName, schemaValue) in doc.Components.Schemas)
+            {
+                // Only fix ApiResponse<T> schemas (named "ApiResponseOf...")
+                if (!schemaName.StartsWith("ApiResponseOf", StringComparison.Ordinal))
+                    continue;
+
+                if (schemaValue is not OpenApiSchema schema || schema.Properties is null)
+                    continue;
+
+                // Fix the "data" property: replace oneOf [null, $ref] with just the $ref
+                if (schema.Properties.TryGetValue("data", out var dataProp) && dataProp is OpenApiSchema dataSchema)
+                {
+                    FixNullableOneOf(schema, "data", dataSchema);
+                }
+
+                // Fix the "errors" property: make it a proper object type
+                if (schema.Properties.TryGetValue("errors", out var errorsProp))
+                {
+                    if (errorsProp is OpenApiSchema errSchema && 
+                        (errSchema.Type is null || errSchema.Type == JsonSchemaType.Null))
+                    {
+                        schema.Properties["errors"] = new OpenApiSchema
+                        {
+                            Description = "Validation or error details. Only present when the request fails.",
+                            Type = JsonSchemaType.Object | JsonSchemaType.Null,
+                            AdditionalPropertiesAllowed = true
+                        };
+                    }
+                }
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    private static void FixNullableOneOf(OpenApiSchema parentSchema, string propertyName, OpenApiSchema dataPropSchema)
+    {
+        // The pattern we're fixing: oneOf: [{ type: "null" }, { $ref: "..." }]
+        if (dataPropSchema.OneOf is not { Count: 2 })
+            return;
+
+        // Find the non-null option (the $ref)
+        OpenApiSchemaReference? refSchema = null;
+        foreach (var option in dataPropSchema.OneOf)
+        {
+            if (option is OpenApiSchemaReference schemaRef)
+            {
+                refSchema = schemaRef;
+                break;
+            }
+        }
+
+        if (refSchema is null)
+            return;
+
+        // Replace the oneOf with just the $ref so Swagger shows the full data shape
+        parentSchema.Properties![propertyName] = refSchema;
     }
 }
