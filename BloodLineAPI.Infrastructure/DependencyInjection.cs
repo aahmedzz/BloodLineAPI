@@ -22,6 +22,7 @@ public static class DependencyInjection
 
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<IJwtGenerator, JwtGenerator>();
+        services.AddScoped<IRegistrationOtpService, RegistrationOtpService>();
         services.Configure<WaSenderApiOptions>(configuration.GetSection("WaSenderApi"));
         services.AddHttpClient<IWhatsappMessageSender, WaSenderApiWhatsappMessageSender>((sp, client) =>
         {
