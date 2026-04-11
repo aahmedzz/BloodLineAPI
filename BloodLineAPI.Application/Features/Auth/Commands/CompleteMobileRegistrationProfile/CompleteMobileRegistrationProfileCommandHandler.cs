@@ -29,9 +29,17 @@ public sealed class CompleteMobileRegistrationProfileCommandHandler(
             return Result<DonorAuthResponse>.Failure("Selected blood type is not available.");
         }
 
+        var governorate = request.Governorate.Trim();
+        var district = request.District.Trim();
+        var area = request.Area.Trim();
+
         donor.DateOfBirth = request.DateOfBirth;
         donor.Gender = request.Gender;
         donor.BloodTypeId = bloodType.Id;
+        donor.Governorate = governorate;
+        donor.District = district;
+        donor.Area = area;
+        donor.Address = string.Join(", ", new[] { area, district, governorate }.Where(x => !string.IsNullOrWhiteSpace(x)));
         donor.WeightKg = request.WeightKg;
         donor.IsRegistrationCompleted = true;
 

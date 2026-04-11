@@ -5,7 +5,6 @@ using BloodLineAPI.Domain.Entities.Users;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
 
 namespace BloodLineAPI.Application.Features.Auth.Commands.RegisterMobileUser;
 
@@ -13,7 +12,7 @@ public sealed class RegisterMobileUserCommandHandler(
     UserManager<User> userManager,
     RoleManager<Role> roleManager,
     IApplicationDbContext dbContext,
-    IWhatsappMessageSender whatsappOtpSender)
+    IRegistrationOtpService registrationOtpService)
     : IRequestHandler<RegisterMobileUserCommand, Result<RegisterMobileUserResponse>>
 {
     public async Task<Result<RegisterMobileUserResponse>> Handle(RegisterMobileUserCommand request, CancellationToken cancellationToken)
@@ -38,14 +37,10 @@ public sealed class RegisterMobileUserCommandHandler(
             return Result<RegisterMobileUserResponse>.Failure("Phone number is already registered.");
         }
 
-        var otpCode = RandomNumberGenerator.GetInt32(1000, 10000).ToString();
-
         var user = new User
         {
             UserName = request.NationalId,
             PhoneNumber = request.PhoneNumber,
-            RegistrationOtpCode = otpCode,
-            RegistrationOtpExpiryTime = DateTime.UtcNow.AddMinutes(10),
             PhoneNumberConfirmed = false
         };
 
@@ -78,10 +73,10 @@ public sealed class RegisterMobileUserCommandHandler(
         await dbContext.Donors.AddAsync(donor, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var otpSent = await whatsappOtpSender.SendVerificationOtpAsync(request.PhoneNumber, otpCode, cancellationToken);
-        if (!otpSent)
+        var otpResult = await registrationOtpService.GenerateStoreAndSendOTPAsync(user, cancellationToken);
+        if (!otpResult.IsSuccess)
         {
-            return Result<RegisterMobileUserResponse>.Failure("Account created but failed to send verification code. Please try resending the code.");
+            return Result<RegisterMobileUserResponse>.Failure($"Account created but failed to send verification code. {otpResult.Error}");
         }
 
         var userPayload = new AuthenticatedMobileUser(
@@ -92,6 +87,6 @@ public sealed class RegisterMobileUserCommandHandler(
             user.PhoneNumberConfirmed,
             donor.IsRegistrationCompleted);
 
-        return Result<RegisterMobileUserResponse>.Success(new RegisterMobileUserResponse("Verification code sent to your WhatsApp number.", true, userPayload));
+        return Result<RegisterMobileUserResponse>.Success(new RegisterMobileUserResponse(otpResult.Data!, true, userPayload));
     }
 }

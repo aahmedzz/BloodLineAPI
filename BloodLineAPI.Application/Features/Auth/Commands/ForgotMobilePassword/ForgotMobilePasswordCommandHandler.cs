@@ -3,13 +3,12 @@ using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Domain.Entities.Users;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
-using System.Security.Cryptography;
 
 namespace BloodLineAPI.Application.Features.Auth.Commands.ForgotMobilePassword;
 
 public sealed class ForgotMobilePasswordCommandHandler(
     UserManager<User> userManager,
-    IWhatsappMessageSender whatsappMessageSender)
+    IRegistrationOtpService registrationOtpService)
     : IRequestHandler<ForgotMobilePasswordCommand, Result<string>>
 {
     public async Task<Result<string>> Handle(ForgotMobilePasswordCommand request, CancellationToken cancellationToken)
@@ -37,23 +36,6 @@ public sealed class ForgotMobilePasswordCommandHandler(
             return Result<string>.Failure("Phone number is missing.");
         }
 
-        var otpCode = RandomNumberGenerator.GetInt32(1000, 10000).ToString();
-        user.RegistrationOtpCode = otpCode;
-        user.RegistrationOtpExpiryTime = DateTime.UtcNow.AddMinutes(10);
-
-        var updateResult = await userManager.UpdateAsync(user);
-        if (!updateResult.Succeeded)
-        {
-            var errors = string.Join(", ", updateResult.Errors.Select(e => e.Description));
-            return Result<string>.Failure(errors);
-        }
-
-        var otpSent = await whatsappMessageSender.SendVerificationOtpAsync(user.PhoneNumber, otpCode, cancellationToken);
-        if (!otpSent)
-        {
-            return Result<string>.Failure("Failed to send verification code. Please try again.");
-        }
-
-        return Result<string>.Success("Verification code sent to your WhatsApp number.");
+        return await registrationOtpService.GenerateStoreAndSendOTPAsync(user, cancellationToken);
     }
 }
