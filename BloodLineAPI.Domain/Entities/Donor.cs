@@ -7,9 +7,10 @@ namespace BloodLineAPI.Domain.Entities
         public string ThirdName { get; set; } = string.Empty;
         public string? FourthName { get; set; }
         public DateOnly DateOfBirth { get; set; }
-        public string Address { get; set; } = string.Empty;
-        public string City { get; set; } = string.Empty;
-        public string District { get; set; } = string.Empty;
+        public string? Address { get; set; }
+        public string? Governorate { get; set; }
+        public string? District { get; set; }
+        public string? Area { get; set; }
         public Gender Gender { get; set; }
         public string NationalId { get; set; } = string.Empty;
         public byte? BloodTypeId { get; set; }
