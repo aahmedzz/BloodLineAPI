@@ -20,9 +20,10 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
             builder.Property(d => d.FourthName).IsRequired(false).HasMaxLength(100);
             builder.Property(d => d.PhoneNumber).IsRequired().HasMaxLength(20);
             builder.Property(d => d.NationalId).HasMaxLength(100);
-            builder.Property(d => d.Address).HasMaxLength(300);
-            builder.Property(d => d.City).HasMaxLength(100);
-            builder.Property(d => d.District).HasMaxLength(100);
+            builder.Property(d => d.Address).IsRequired(false).HasMaxLength(300);
+            builder.Property(d => d.Governorate).IsRequired(false).HasMaxLength(100);
+            builder.Property(d => d.District).IsRequired(false).HasMaxLength(100);
+            builder.Property(d => d.Area).IsRequired(false).HasMaxLength(100);
             builder.Property(d => d.WeightKg).HasPrecision(5, 2);
             builder.Property(d => d.IsRegistrationCompleted).HasDefaultValue(false);
             builder.HasOne(d => d.BloodType)

@@ -1,4 +1,5 @@
 using BloodLineAPI.Domain.Entities;
+using BloodLineAPI.Domain.Common;
 using BloodLineAPI.Domain.Entities.BloodEntities;
 using BloodLineAPI.Domain.Entities.DonationEntities;
 using BloodLineAPI.Domain.Entities.Users;
@@ -31,6 +32,27 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        var utcNow = DateTime.UtcNow;
+
+        foreach (var entry in ChangeTracker.Entries<AuditableEntity>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                if (entry.Entity.CreatedAt == default)
+                {
+                    entry.Entity.CreatedAt = utcNow;
+                }
+
+                entry.Entity.LastModifiedAt = null;
+            }
+            else if (entry.State == EntityState.Modified)
+            {
+                entry.Entity.LastModifiedAt = utcNow;
+                entry.Property(x => x.CreatedAt).IsModified = false;
+                entry.Property(x => x.CreatedBy).IsModified = false;
+            }
+        }
+
         return base.SaveChangesAsync(cancellationToken);
     }
 

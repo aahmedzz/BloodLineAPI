@@ -16,5 +16,17 @@ public sealed class CompleteMobileRegistrationProfileCommandValidator : Abstract
             .GreaterThan(0).When(x => x.WeightKg.HasValue)
             .LessThanOrEqualTo(300).When(x => x.WeightKg.HasValue)
             .WithMessage("Weight must be between 1 and 300 KG.");
+
+        RuleFor(x => x.Governorate)
+            .NotEmpty().WithMessage("Governorate is required.")
+            .MaximumLength(100).WithMessage("Governorate must not exceed 100 characters.");
+
+        RuleFor(x => x.District)
+            .NotEmpty().WithMessage("District is required.")
+            .MaximumLength(100).WithMessage("District must not exceed 100 characters.");
+
+        RuleFor(x => x.Area)
+            .NotEmpty().WithMessage("Area is required.")
+            .MaximumLength(100).WithMessage("Area must not exceed 100 characters.");
     }
 }

@@ -498,9 +498,12 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Address")
-                        .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Area")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("AllowLeaderboardVisibility")
                         .HasColumnType("bit");
@@ -508,8 +511,7 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Property<byte?>("BloodTypeId")
                         .HasColumnType("tinyint");
 
-                    b.Property<string>("City")
-                        .IsRequired()
+                    b.Property<string>("Governorate")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -523,7 +525,6 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasColumnType("date");
 
                     b.Property<string>("District")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 

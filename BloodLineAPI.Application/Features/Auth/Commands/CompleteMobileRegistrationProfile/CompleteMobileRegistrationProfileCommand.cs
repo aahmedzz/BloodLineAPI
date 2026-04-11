@@ -10,6 +10,9 @@ public sealed record CompleteMobileRegistrationProfileCommand(
     Gender Gender,
     BloodGroupName BloodGroupName,
     RhFactor RhFactor,
+    string Governorate,
+    string District,
+    string Area,
     decimal? WeightKg) : IRequest<Result<DonorAuthResponse>>
 {
     [JsonIgnore]
