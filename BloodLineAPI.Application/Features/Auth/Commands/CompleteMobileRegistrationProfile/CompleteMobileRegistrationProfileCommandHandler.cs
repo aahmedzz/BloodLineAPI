@@ -1,5 +1,6 @@
 using BloodLineAPI.Application.Common.Interfaces;
 using BloodLineAPI.Application.Common.Models;
+using BloodLineAPI.Domain.Events;
 using BloodLineAPI.Domain.Entities.Users;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
@@ -29,6 +30,8 @@ public sealed class CompleteMobileRegistrationProfileCommandHandler(
             return Result<DonorAuthResponse>.Failure("Selected blood type is not available.");
         }
 
+        var wasRegistrationCompleted = donor.IsRegistrationCompleted;
+
         var governorate = request.Governorate.Trim();
         var district = request.District.Trim();
         var area = request.Area.Trim();
@@ -42,6 +45,11 @@ public sealed class CompleteMobileRegistrationProfileCommandHandler(
         donor.Address = string.Join(", ", new[] { area, district, governorate }.Where(x => !string.IsNullOrWhiteSpace(x)));
         donor.WeightKg = request.WeightKg;
         donor.IsRegistrationCompleted = true;
+
+        if (!wasRegistrationCompleted)
+        {
+            donor.AddDomainEvent(new ProfileCompletedEvent(donor.Id, DateTime.UtcNow));
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

@@ -20,7 +20,7 @@ public interface IApplicationDbContext
     DbSet<DonationRating> DonationRatings { get; }
     DbSet<MedicalScreening> MedicalScreenings { get; }
     DbSet<Notification> Notifications { get; }
-    DbSet<RewardHistory> RewardHistories { get; }
+    DbSet<PointTransaction> PointTransactions { get; }
     DbSet<Badge> Badges { get; }
     DbSet<DonorBadge> DonorBadges { get; }
     DbSet<InventoryTransaction> InventoryTransactions { get; }
