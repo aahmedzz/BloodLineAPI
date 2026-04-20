@@ -26,6 +26,9 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
             builder.Property(d => d.Area).IsRequired(false).HasMaxLength(100);
             builder.Property(d => d.WeightKg).HasPrecision(5, 2);
             builder.Property(d => d.IsRegistrationCompleted).HasDefaultValue(false);
+            builder.Property(d => d.MonthlyPoints).HasDefaultValue(0);
+            builder.Property(d => d.TotalDonationCount).HasDefaultValue(0);
+            builder.Property(d => d.TotalPoints).HasDefaultValue(0);
             builder.HasOne(d => d.BloodType)
                 .WithMany(bt => bt.Donors)
                 .HasForeignKey(d => d.BloodTypeId)
