@@ -20,13 +20,15 @@ namespace BloodLineAPI.Domain.Entities
         public bool IsRegistrationCompleted { get; set; } = false;
         public DateTime? LastDonationDate { get; set; }
         public int TotalPoints { get; set; } = 0;
+        public int MonthlyPoints { get; set; } = 0;
+        public int TotalDonationCount { get; set; } = 0;
         public bool AllowLeaderboardVisibility { get; set; } = true;
         public string FullName => string.Join(" ", new[] { FirstName, SecondName, ThirdName, FourthName }
             .Where(static n => !string.IsNullOrWhiteSpace(n)));
 
         public User User { get; set; } = null!;
         public ICollection<DonationAppointment> DonationAppointments { get; set; } = new List<DonationAppointment>();
-        public ICollection<RewardHistory> RewardHistories { get; set; } = new List<RewardHistory>();
+        public ICollection<PointTransaction> PointTransactions { get; set; } = new List<PointTransaction>();
         public ICollection<DonorBadge> DonorBadges { get; set; } = new List<DonorBadge>();
         public ICollection<DonationRating> DonationRatings { get; set; } = new List<DonationRating>();
 

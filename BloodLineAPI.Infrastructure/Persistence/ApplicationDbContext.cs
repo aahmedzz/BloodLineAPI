@@ -1,17 +1,22 @@
+using BloodLineAPI.Application.Common.Interfaces;
+using BloodLineAPI.Domain.Common;
 using BloodLineAPI.Domain.Entities;
 using BloodLineAPI.Domain.Common;
 using BloodLineAPI.Domain.Entities.BloodEntities;
 using BloodLineAPI.Domain.Entities.DonationEntities;
 using BloodLineAPI.Domain.Entities.Users;
-using BloodLineAPI.Application.Common.Interfaces;
+using MediatR;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore; using Microsoft.AspNetCore.Identity;
 
 namespace BloodLineAPI.Infrastructure.Persistence;
 
-public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IPublisher? publisher = null)
     : IdentityDbContext<User, Role, Guid, IdentityUserClaim<Guid>, UserRole, IdentityUserLogin<Guid>, IdentityRoleClaim<Guid>, IdentityUserToken<Guid>>(options), IApplicationDbContext
 {
+    private readonly IPublisher? _publisher = publisher;
+
     public DbSet<Staff> Staff { get; set; } = null!;
     public DbSet<Donor> Donors { get; set; } = null!;
     public DbSet<BloodType> BloodTypes { get; set; } = null!;
@@ -23,14 +28,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<DonationRating> DonationRatings { get; set; } = null!;
     public DbSet<MedicalScreening> MedicalScreenings { get; set; } = null!;
     public DbSet<Notification> Notifications { get; set; } = null!;
-    public DbSet<RewardHistory> RewardHistories { get; set; } = null!;
+    public DbSet<PointTransaction> PointTransactions { get; set; } = null!;
     public DbSet<Badge> Badges { get; set; } = null!;
     public DbSet<DonorBadge> DonorBadges { get; set; } = null!;
     public DbSet<InventoryTransaction> InventoryTransactions { get; set; } = null!;
     public DbSet<DiscardRecord> DiscardRecords { get; set; } = null!;
     public DbSet<UrgentBloodAppeal> UrgentBloodAppeals { get; set; } = null!;
 
-    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         var utcNow = DateTime.UtcNow;
 
@@ -53,13 +58,34 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             }
         }
 
-        return base.SaveChangesAsync(cancellationToken);
+        var domainEvents = ChangeTracker
+            .Entries<BaseEntity>()
+            .SelectMany(entry => entry.Entity.DomainEvents)
+            .ToList();
+
+        foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+        {
+            entry.Entity.ClearDomainEvents();
+        }
+
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        if (_publisher is null)
+        {
+            return result;
+        }
+
+        foreach (var domainEvent in domainEvents)
+        {
+            await _publisher.Publish(domainEvent, cancellationToken);
+        }
+
+        return result;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
     }
 }
