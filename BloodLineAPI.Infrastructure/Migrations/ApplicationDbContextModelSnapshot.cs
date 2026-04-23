@@ -33,22 +33,140 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("BadgeKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("BadgeName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("BadgeNameAr")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("BadgeType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("BonusPoints")
+                        .HasColumnType("int");
 
                     b.Property<string>("IconUrl")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("RequiredPoints")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
+                    b.HasIndex("BadgeKey")
+                        .IsUnique();
+
                     b.ToTable("Badges");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("f6ee9496-e7fb-43c3-8275-ec5f35cf01a1"),
+                            BadgeDescription = "Awarded for completing your first donation.",
+                            BadgeKey = "giver",
+                            BadgeName = "Giver",
+                            BadgeNameAr = "المعطي",
+                            BadgeType = "Milestone",
+                            BonusPoints = 50,
+                            IconUrl = "badges/giver.png"
+                        },
+                        new
+                        {
+                            Id = new Guid("cc39fc72-7f5f-4d17-9bfd-9a2f3f5b8db1"),
+                            BadgeDescription = "Awarded after 3 completed donations.",
+                            BadgeKey = "helper",
+                            BadgeName = "Helper",
+                            BadgeNameAr = "المساعد",
+                            BadgeType = "Milestone",
+                            BonusPoints = 75,
+                            IconUrl = "badges/helper.png"
+                        },
+                        new
+                        {
+                            Id = new Guid("89e198c4-d715-4cf6-a85f-7696159f423a"),
+                            BadgeDescription = "Awarded after 5 completed donations.",
+                            BadgeKey = "hero",
+                            BadgeName = "Hero",
+                            BadgeNameAr = "البطل",
+                            BadgeType = "Milestone",
+                            BonusPoints = 100,
+                            IconUrl = "badges/hero.png"
+                        },
+                        new
+                        {
+                            Id = new Guid("e3f8c38b-3858-45f0-b571-c7ec736dbfee"),
+                            BadgeDescription = "Awarded after 10 completed donations.",
+                            BadgeKey = "life_saver",
+                            BadgeName = "Life Saver",
+                            BadgeNameAr = "منقذ الحياة",
+                            BadgeType = "Milestone",
+                            BonusPoints = 150,
+                            IconUrl = "badges/life_saver.png"
+                        },
+                        new
+                        {
+                            Id = new Guid("c80d19d2-63d9-4fb6-bf77-fa8f253f50b4"),
+                            BadgeDescription = "Awarded after 20 completed donations.",
+                            BadgeKey = "monqez",
+                            BadgeName = "Monqez",
+                            BadgeNameAr = "منقذ",
+                            BadgeType = "Milestone",
+                            BonusPoints = 300,
+                            IconUrl = "badges/monqez.png"
+                        },
+                        new
+                        {
+                            Id = new Guid("2ef1880e-ca8b-4383-8584-3b31f1fb9448"),
+                            BadgeDescription = "Awarded for the first emergency donation.",
+                            BadgeKey = "responder",
+                            BadgeName = "Responder",
+                            BadgeNameAr = "المستجيب",
+                            BadgeType = "Action",
+                            BonusPoints = 100,
+                            IconUrl = "badges/responder.png"
+                        },
+                        new
+                        {
+                            Id = new Guid("db1d6774-bf5f-4fdd-aea3-b3865e6a546d"),
+                            BadgeDescription = "Awarded for donors with rare blood type O- or AB-.",
+                            BadgeKey = "golden_blood",
+                            BadgeName = "Golden Blood",
+                            BadgeNameAr = "الدم الذهبي",
+                            BadgeType = "Action",
+                            BonusPoints = 100,
+                            IconUrl = "badges/golden_blood.png"
+                        },
+                        new
+                        {
+                            Id = new Guid("7db611c5-b017-48d3-84fb-2273d61938df"),
+                            BadgeDescription = "Awarded after sharing 20 urgent requests.",
+                            BadgeKey = "ambassador",
+                            BadgeName = "Ambassador",
+                            BadgeNameAr = "السفير",
+                            BadgeType = "Action",
+                            BonusPoints = 80,
+                            IconUrl = "badges/ambassador.png"
+                        },
+                        new
+                        {
+                            Id = new Guid("e98fa758-1395-4ca1-a17c-51b965ef8f77"),
+                            BadgeDescription = "Awarded for donating after midnight.",
+                            BadgeKey = "night_owl",
+                            BadgeName = "Night Owl",
+                            BadgeNameAr = "بومة الليل",
+                            BadgeType = "Action",
+                            BonusPoints = 60,
+                            IconUrl = "badges/night_owl.png"
+                        });
                 });
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.BloodEntities.BloodBag", b =>
@@ -323,11 +441,52 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.ToTable("DiscardRecords");
                 });
 
+            modelBuilder.Entity("BloodLineAPI.Domain.Entities.DonationEntities.CenterExclusion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<TimeSpan?>("SpecialClosingTime")
+                        .HasColumnType("time");
+
+                    b.Property<TimeSpan?>("SpecialOpeningTime")
+                        .HasColumnType("time");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CenterId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("CenterExclusions");
+                });
+
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.DonationEntities.DonationAppointment", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -340,8 +499,8 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
                     b.Property<string>("DonationType")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<Guid>("DonorId")
                         .HasColumnType("uniqueidentifier");
@@ -349,11 +508,20 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Property<TimeSpan>("EndTime")
                         .HasColumnType("time");
 
+                    b.Property<Guid?>("HealthPreScreeningId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("LastModifiedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<DateTime>("ScheduledDate")
                         .HasColumnType("datetime2");
@@ -363,13 +531,16 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("DonationCenterId");
 
                     b.HasIndex("DonorId");
+
+                    b.HasIndex("HealthPreScreeningId");
 
                     b.ToTable("DonationAppointments");
                 });
@@ -441,11 +612,32 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
                     b.ToTable("DonationCenters");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("b5b4d5b7-eaf8-4a92-8b0a-2fc73f6cc3d1"),
+                            AddressDetails = "Beni Suef Main Branch",
+                            CenterType = "MainBranch",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            DescriptionText = "Main branch in Beni Suef.",
+                            EndTime = new TimeSpan(0, 21, 0, 0, 0),
+                            Latitude = 29.042005899999999,
+                            Location = "Beni Suef",
+                            Longitude = 31.118414000000001,
+                            MaxDonorsPerSlot = 10,
+                            Name = "Beni Suef Main Branch",
+                            SlotDurationMinutes = 15,
+                            StartDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            StartTime = new TimeSpan(0, 7, 0, 0, 0),
+                            Status = "Active"
+                        });
                 });
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.DonationEntities.DonationRating", b =>
@@ -492,6 +684,161 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.ToTable("DonationRatings");
                 });
 
+            modelBuilder.Entity("BloodLineAPI.Domain.Entities.DonationEntities.HealthPreScreening", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("DonorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("HasBleedingDisorder")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasChronicDisease")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasRecentInfection")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasRecentSurgery")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasRecentTattooOrPiercing")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasRecentVaccination")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsEligible")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPregnantOrBreastfeeding")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsTakingMedication")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ScreenedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DonorId");
+
+                    b.ToTable("HealthPreScreenings");
+                });
+
+            modelBuilder.Entity("BloodLineAPI.Domain.Entities.DonationEntities.OpeningHours", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<TimeSpan>("ClosingTime")
+                        .HasColumnType("time");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("MaxDonorsPerSlot")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan>("OpeningTime")
+                        .HasColumnType("time");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CenterId", "DayOfWeek")
+                        .IsUnique();
+
+                    b.ToTable("OpeningHours");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("0b14eefa-72d9-4f83-aad4-6d4e90ca8e10"),
+                            CenterId = new Guid("b5b4d5b7-eaf8-4a92-8b0a-2fc73f6cc3d1"),
+                            ClosingTime = new TimeSpan(0, 21, 0, 0, 0),
+                            DayOfWeek = 0,
+                            IsClosed = false,
+                            OpeningTime = new TimeSpan(0, 7, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = new Guid("7f98f6f7-9556-4fbb-a457-e15457d0656f"),
+                            CenterId = new Guid("b5b4d5b7-eaf8-4a92-8b0a-2fc73f6cc3d1"),
+                            ClosingTime = new TimeSpan(0, 21, 0, 0, 0),
+                            DayOfWeek = 1,
+                            IsClosed = false,
+                            OpeningTime = new TimeSpan(0, 7, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = new Guid("9da3ab38-757b-4b96-80a5-3e84f917f4fe"),
+                            CenterId = new Guid("b5b4d5b7-eaf8-4a92-8b0a-2fc73f6cc3d1"),
+                            ClosingTime = new TimeSpan(0, 21, 0, 0, 0),
+                            DayOfWeek = 2,
+                            IsClosed = false,
+                            OpeningTime = new TimeSpan(0, 7, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = new Guid("0eb9fceb-4f4f-48b5-80c5-63f9da73b763"),
+                            CenterId = new Guid("b5b4d5b7-eaf8-4a92-8b0a-2fc73f6cc3d1"),
+                            ClosingTime = new TimeSpan(0, 21, 0, 0, 0),
+                            DayOfWeek = 3,
+                            IsClosed = false,
+                            OpeningTime = new TimeSpan(0, 7, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = new Guid("f7ff2d1c-b95a-4f08-806d-9bf8f5f1a036"),
+                            CenterId = new Guid("b5b4d5b7-eaf8-4a92-8b0a-2fc73f6cc3d1"),
+                            ClosingTime = new TimeSpan(0, 21, 0, 0, 0),
+                            DayOfWeek = 4,
+                            IsClosed = false,
+                            OpeningTime = new TimeSpan(0, 7, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = new Guid("2dc3fd35-a567-437f-a53f-c833fddfa0f7"),
+                            CenterId = new Guid("b5b4d5b7-eaf8-4a92-8b0a-2fc73f6cc3d1"),
+                            ClosingTime = new TimeSpan(0, 21, 0, 0, 0),
+                            DayOfWeek = 5,
+                            IsClosed = false,
+                            OpeningTime = new TimeSpan(0, 7, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = new Guid("3f9ef858-2962-47d5-95f9-c7e3f2eaeb58"),
+                            CenterId = new Guid("b5b4d5b7-eaf8-4a92-8b0a-2fc73f6cc3d1"),
+                            ClosingTime = new TimeSpan(0, 21, 0, 0, 0),
+                            DayOfWeek = 6,
+                            IsClosed = false,
+                            OpeningTime = new TimeSpan(0, 7, 0, 0, 0)
+                        });
+                });
+
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.Donor", b =>
                 {
                     b.Property<Guid>("Id")
@@ -501,19 +848,15 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
+                    b.Property<bool>("AllowLeaderboardVisibility")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Area")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<bool>("AllowLeaderboardVisibility")
-                        .HasColumnType("bit");
-
                     b.Property<byte?>("BloodTypeId")
                         .HasColumnType("tinyint");
-
-                    b.Property<string>("Governorate")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -541,6 +884,10 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Governorate")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<bool>("IsRegistrationCompleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -554,6 +901,11 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("MonthlyPoints")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("NationalId")
                         .IsRequired()
@@ -575,8 +927,15 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("TotalDonationCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("TotalPoints")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<decimal?>("WeightKg")
                         .HasPrecision(5, 2)
@@ -678,6 +1037,9 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid>("DonorId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("HemoglobinLevel")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
@@ -694,6 +1056,9 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("LockoutUntil")
+                        .HasColumnType("datetime2");
+
                     b.Property<Guid>("PerformedByStaffId")
                         .HasColumnType("uniqueidentifier");
 
@@ -709,6 +1074,8 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasColumnType("decimal(5,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DonorId");
 
                     b.HasIndex("PerformedByStaffId");
 
@@ -754,7 +1121,7 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.ToTable("Notifications");
                 });
 
-            modelBuilder.Entity("BloodLineAPI.Domain.Entities.RewardHistory", b =>
+            modelBuilder.Entity("BloodLineAPI.Domain.Entities.PointTransaction", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -762,13 +1129,23 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
                     b.Property<string>("ActionType")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<Guid>("DonorId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("PointsAwarded")
+                    b.Property<string>("MonthKey")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<int>("Points")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("TransactionDate")
@@ -776,9 +1153,13 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DonorId");
+                    b.HasIndex("DonorId", "ActionType");
 
-                    b.ToTable("RewardHistories");
+                    b.HasIndex("DonorId", "MonthKey");
+
+                    b.HasIndex("MonthKey", "Points");
+
+                    b.ToTable("PointTransactions");
                 });
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.Staff", b =>
@@ -1190,6 +1571,17 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Navigation("BloodBag");
                 });
 
+            modelBuilder.Entity("BloodLineAPI.Domain.Entities.DonationEntities.CenterExclusion", b =>
+                {
+                    b.HasOne("BloodLineAPI.Domain.Entities.DonationEntities.DonationCenter", "Center")
+                        .WithMany("CenterExclusions")
+                        .HasForeignKey("CenterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Center");
+                });
+
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.DonationEntities.DonationAppointment", b =>
                 {
                     b.HasOne("BloodLineAPI.Domain.Entities.DonationEntities.DonationCenter", "DonationCenter")
@@ -1204,9 +1596,16 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BloodLineAPI.Domain.Entities.DonationEntities.HealthPreScreening", "HealthPreScreening")
+                        .WithMany()
+                        .HasForeignKey("HealthPreScreeningId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("DonationCenter");
 
                     b.Navigation("Donor");
+
+                    b.Navigation("HealthPreScreening");
                 });
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.DonationEntities.DonationRating", b =>
@@ -1226,6 +1625,28 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Navigation("DonationAppointment");
 
                     b.Navigation("Donor");
+                });
+
+            modelBuilder.Entity("BloodLineAPI.Domain.Entities.DonationEntities.HealthPreScreening", b =>
+                {
+                    b.HasOne("BloodLineAPI.Domain.Entities.Donor", "Donor")
+                        .WithMany("HealthPreScreenings")
+                        .HasForeignKey("DonorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Donor");
+                });
+
+            modelBuilder.Entity("BloodLineAPI.Domain.Entities.DonationEntities.OpeningHours", b =>
+                {
+                    b.HasOne("BloodLineAPI.Domain.Entities.DonationEntities.DonationCenter", "Center")
+                        .WithMany("OpeningHours")
+                        .HasForeignKey("CenterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Center");
                 });
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.Donor", b =>
@@ -1286,11 +1707,19 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.MedicalScreening", b =>
                 {
+                    b.HasOne("BloodLineAPI.Domain.Entities.Donor", "Donor")
+                        .WithMany("MedicalScreenings")
+                        .HasForeignKey("DonorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BloodLineAPI.Domain.Entities.Staff", "PerformedByStaff")
                         .WithMany("MedicalScreenings")
                         .HasForeignKey("PerformedByStaffId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Donor");
 
                     b.Navigation("PerformedByStaff");
                 });
@@ -1306,10 +1735,10 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("BloodLineAPI.Domain.Entities.RewardHistory", b =>
+            modelBuilder.Entity("BloodLineAPI.Domain.Entities.PointTransaction", b =>
                 {
                     b.HasOne("BloodLineAPI.Domain.Entities.Donor", "Donor")
-                        .WithMany("RewardHistories")
+                        .WithMany("PointTransactions")
                         .HasForeignKey("DonorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1441,7 +1870,11 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.DonationEntities.DonationCenter", b =>
                 {
+                    b.Navigation("CenterExclusions");
+
                     b.Navigation("DonationAppointments");
+
+                    b.Navigation("OpeningHours");
                 });
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.Donor", b =>
@@ -1452,7 +1885,11 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
                     b.Navigation("DonorBadges");
 
-                    b.Navigation("RewardHistories");
+                    b.Navigation("HealthPreScreenings");
+
+                    b.Navigation("MedicalScreenings");
+
+                    b.Navigation("PointTransactions");
                 });
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.Staff", b =>

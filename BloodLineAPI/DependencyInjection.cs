@@ -178,21 +178,22 @@ public static class DependencyInjection
 
             foreach (var (schemaName, schemaValue) in doc.Components.Schemas)
             {
-                // Only fix ApiResponse<T> schemas (named "ApiResponseOf...")
-                if (!schemaName.StartsWith("ApiResponseOf", StringComparison.Ordinal))
-                    continue;
-
                 if (schemaValue is not OpenApiSchema schema || schema.Properties is null)
                     continue;
 
-                // Fix the "data" property: replace oneOf [null, $ref] with just the $ref
-                if (schema.Properties.TryGetValue("data", out var dataProp) && dataProp is OpenApiSchema dataSchema)
+                // Fix nullable $ref properties rendered as oneOf [null, $ref].
+                // Swagger UI often picks null as Example Value and hides object shape.
+                foreach (var (propertyName, propertyValue) in schema.Properties)
                 {
-                    FixNullableOneOf(schema, "data", dataSchema);
+                    if (propertyValue is OpenApiSchema propertySchema)
+                    {
+                        FixNullableOneOf(schema, propertyName, propertySchema);
+                    }
                 }
 
-                // Fix the "errors" property: make it a proper object type
-                if (schema.Properties.TryGetValue("errors", out var errorsProp))
+                // Keep the specific ApiResponse<T> "errors" object fix.
+                if (schemaName.StartsWith("ApiResponseOf", StringComparison.Ordinal)
+                    && schema.Properties.TryGetValue("errors", out var errorsProp))
                 {
                     if (errorsProp is OpenApiSchema errSchema && 
                         (errSchema.Type is null || errSchema.Type == JsonSchemaType.Null))

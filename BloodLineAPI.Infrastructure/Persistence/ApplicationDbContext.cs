@@ -1,7 +1,6 @@
 using BloodLineAPI.Application.Common.Interfaces;
 using BloodLineAPI.Domain.Common;
 using BloodLineAPI.Domain.Entities;
-using BloodLineAPI.Domain.Common;
 using BloodLineAPI.Domain.Entities.BloodEntities;
 using BloodLineAPI.Domain.Entities.DonationEntities;
 using BloodLineAPI.Domain.Entities.Users;
@@ -25,6 +24,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<BloodTestResult> BloodTestResults { get; set; } = null!;
     public DbSet<DonationCenter> DonationCenters { get; set; } = null!;
     public DbSet<DonationAppointment> DonationAppointments { get; set; } = null!;
+    public DbSet<HealthPreScreening> HealthPreScreenings { get; set; } = null!;
+    public DbSet<OpeningHours> OpeningHours { get; set; } = null!;
+    public DbSet<CenterExclusion> CenterExclusions { get; set; } = null!;
     public DbSet<DonationRating> DonationRatings { get; set; } = null!;
     public DbSet<MedicalScreening> MedicalScreenings { get; set; } = null!;
     public DbSet<Notification> Notifications { get; set; } = null!;
