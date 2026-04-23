@@ -31,6 +31,8 @@ namespace BloodLineAPI.Domain.Entities
         public ICollection<PointTransaction> PointTransactions { get; set; } = new List<PointTransaction>();
         public ICollection<DonorBadge> DonorBadges { get; set; } = new List<DonorBadge>();
         public ICollection<DonationRating> DonationRatings { get; set; } = new List<DonationRating>();
+        public ICollection<HealthPreScreening> HealthPreScreenings { get; set; } = new List<HealthPreScreening>();
+        public ICollection<MedicalScreening> MedicalScreenings { get; set; } = new List<MedicalScreening>();
 
     }
 }

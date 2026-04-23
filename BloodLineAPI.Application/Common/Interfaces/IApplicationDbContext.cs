@@ -17,6 +17,9 @@ public interface IApplicationDbContext
     DbSet<BloodTestResult> BloodTestResults { get; }
     DbSet<DonationCenter> DonationCenters { get; }
     DbSet<DonationAppointment> DonationAppointments { get; }
+    DbSet<HealthPreScreening> HealthPreScreenings { get; }
+    DbSet<OpeningHours> OpeningHours { get; }
+    DbSet<CenterExclusion> CenterExclusions { get; }
     DbSet<DonationRating> DonationRatings { get; }
     DbSet<MedicalScreening> MedicalScreenings { get; }
     DbSet<Notification> Notifications { get; }

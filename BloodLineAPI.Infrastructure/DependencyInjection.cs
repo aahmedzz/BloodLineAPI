@@ -1,9 +1,13 @@
 using BloodLineAPI.Application.Common.Interfaces;
+using BloodLineAPI.Domain.Common;
 using BloodLineAPI.Domain.Repositories;
+using BloodLineAPI.Infrastructure.BackgroundJobs;
 using BloodLineAPI.Infrastructure.Authentication;
 using BloodLineAPI.Infrastructure.Messaging;
 using BloodLineAPI.Infrastructure.Persistence;
 using BloodLineAPI.Infrastructure.Repositories;
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +32,19 @@ public static class DependencyInjection
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<IJwtGenerator, JwtGenerator>();
         services.AddScoped<IRegistrationOtpService, RegistrationOtpService>();
+        services.AddScoped<INotificationSender, NoOpNotificationSender>();
+        services.AddScoped<AppointmentReminderJob>();
+
+        services.Configure<DonationCooldownSettings>(configuration.GetSection("DonationCooldown"));
+        services.Configure<AppointmentSettings>(configuration.GetSection("Appointment"));
+
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            services.AddHangfire(config => config.UseSqlServerStorage(connectionString, new SqlServerStorageOptions()));
+            services.AddHangfireServer();
+        }
+
         services.Configure<WaSenderApiOptions>(configuration.GetSection("WaSenderApi"));
         services.AddHttpClient<IWhatsappMessageSender, WaSenderApiWhatsappMessageSender>((sp, client) =>
         {

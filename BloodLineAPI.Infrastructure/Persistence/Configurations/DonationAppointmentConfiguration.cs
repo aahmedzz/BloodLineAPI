@@ -14,8 +14,10 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<DonationAppointment> builder)
         {
             builder.HasKey(da => da.Id);
-            builder.Property(da => da.DonationType).HasMaxLength(100);
-            builder.Property(da => da.Status).HasConversion<string>();
+            builder.Property(da => da.DonationType).HasConversion<string>().HasMaxLength(50);
+            builder.Property(da => da.Status).HasConversion<string>().HasMaxLength(50);
+            builder.Property(da => da.CancellationReason).HasMaxLength(500);
+            builder.Property(da => da.RowVersion).IsRowVersion();
             builder.HasOne(da => da.Donor)
                 .WithMany(d => d.DonationAppointments)
                 .HasForeignKey(da => da.DonorId)
@@ -24,6 +26,10 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
                 .WithMany(dc => dc.DonationAppointments)
                 .HasForeignKey(da => da.DonationCenterId)
                 .OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(da => da.HealthPreScreening)
+                .WithMany()
+                .HasForeignKey(da => da.HealthPreScreeningId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }
