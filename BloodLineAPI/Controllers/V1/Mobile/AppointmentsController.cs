@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Application.Features.Appointments.Commands.CancelAppointment;
+using BloodLineAPI.Application.Features.Appointments.Commands.ConfirmAppointmentDecision;
 using BloodLineAPI.Application.Features.Appointments.Commands.CreateAppointment;
 using BloodLineAPI.Application.Features.Appointments.Commands.RescheduleAppointment;
 using BloodLineAPI.Application.Features.Appointments.Commands.SubmitHealthPreScreening;
@@ -81,6 +82,26 @@ public sealed class AppointmentsController(ISender sender) : ControllerBase
         }
 
         return Ok(ApiResponse<CreateAppointmentResultDto>.Ok(result.Data!));
+    }
+
+    [HttpPut("{id:guid}/confirmation")]
+    [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ConfirmOrCancel(Guid id, [FromBody] ConfirmAppointmentDecisionRequest request, CancellationToken ct)
+    {
+        if (!TryGetDonorId(out var donorId))
+        {
+            return Unauthorized(ApiResponse<object>.Fail("Invalid or missing authentication token."));
+        }
+
+        var result = await sender.Send(new ConfirmAppointmentDecisionCommand(id, request.IsConfirmed) { DonorId = donorId }, ct);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
+        }
+
+        return Ok(ApiResponse<string>.Ok(result.Data!));
     }
 
     [HttpPost("health-screening")]
