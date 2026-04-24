@@ -20,7 +20,7 @@ public sealed class GetAppointmentDetailsQueryHandler(IApplicationDbContext dbCo
 
         var center = appointment.DonationCenter;
 
-        var centerDto = new DonationCenterDto(
+        var centerDto = new AppointmentDonationCenterDto(
             center.Id,
             center.Name,
             center.Location,

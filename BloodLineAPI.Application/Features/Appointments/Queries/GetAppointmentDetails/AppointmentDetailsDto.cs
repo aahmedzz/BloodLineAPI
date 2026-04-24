@@ -10,5 +10,5 @@ public sealed record AppointmentDetailsDto(
     string DonationType,
     string Status,
     string? CancellationReason,
-    DonationCenterDto Center,
+    AppointmentDonationCenterDto Center,
     HealthPreScreeningSummaryDto? HealthScreening);

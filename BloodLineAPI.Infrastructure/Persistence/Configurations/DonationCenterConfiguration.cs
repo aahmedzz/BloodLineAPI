@@ -17,6 +17,7 @@ public class DonationCenterConfiguration : IEntityTypeConfiguration<DonationCent
         builder.Property(dc => dc.AddressDetails).HasMaxLength(500);
         builder.Property(dc => dc.CenterType).HasConversion<string>().HasMaxLength(50);
         builder.Property(dc => dc.Status).HasConversion<string>().HasMaxLength(50);
+        builder.Property(dc => dc.SupportedDonationTypes).IsRequired().HasMaxLength(200);
 
         builder.HasData(new DonationCenter
         {
@@ -28,6 +29,7 @@ public class DonationCenterConfiguration : IEntityTypeConfiguration<DonationCent
             Longitude = 31.118414,
             CenterType = CenterType.MainBranch,
             Status = CenterStatus.Active,
+            SupportedDonationTypes = string.Join(',', Enum.GetNames<DonationType>()),
             StartDate = new DateTime(2026, 1, 1),
             EndDate = null,
             StartTime = new TimeSpan(7, 0, 0),

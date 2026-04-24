@@ -18,8 +18,24 @@ public sealed class GetDonationCentersQueryHandler(IApplicationDbContext dbConte
             query = query.Where(c => c.Name.Contains(search) || c.Location.Contains(search));
         }
 
-        return await query
+        var centers = await query
             .OrderBy(c => c.Name)
+            .Select(c => new
+            {
+                c.Id,
+                c.Name,
+                c.Location,
+                c.AddressDetails,
+                c.Latitude,
+                c.Longitude,
+                CenterType = c.CenterType.ToString(),
+                Status = c.Status.ToString(),
+                OperatingHours = $"{c.StartTime:hh\\:mm} - {c.EndTime:hh\\:mm}",
+                c.SupportedDonationTypes
+            })
+            .ToListAsync(cancellationToken);
+
+        return centers
             .Select(c => new DonationCenterDto(
                 c.Id,
                 c.Name,
@@ -27,9 +43,20 @@ public sealed class GetDonationCentersQueryHandler(IApplicationDbContext dbConte
                 c.AddressDetails,
                 c.Latitude,
                 c.Longitude,
-                c.CenterType.ToString(),
-                c.Status.ToString(),
-                $"{c.StartTime:hh\\:mm} - {c.EndTime:hh\\:mm}"))
-            .ToListAsync(cancellationToken);
+                c.CenterType,
+                c.Status,
+                c.OperatingHours,
+                c.SupportedDonationTypes
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(static type => type switch
+                    {
+                        "WholeBlood" => "whole blood",
+                        "Platelets" => "platelets",
+                        "Plasma" => "plasma",
+                        _ => type
+                    })
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList()))
+            .ToList();
     }
 }

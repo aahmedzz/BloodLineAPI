@@ -9,4 +9,5 @@ public sealed record DonationCenterDto(
     double Longitude,
     string CenterType,
     string Status,
-    string OperatingHours);
+    string OperatingHours,
+    IReadOnlyList<string> AvailableDonationTypes);

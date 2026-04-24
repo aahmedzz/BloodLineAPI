@@ -9,6 +9,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
         public double Longitude { get; set; }
         public CenterType CenterType { get; set; }
         public CenterStatus Status { get; set; } = CenterStatus.Active;
+        public string SupportedDonationTypes { get; set; } = string.Join(',', Enum.GetNames<DonationType>());
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public TimeSpan StartTime { get; set; }
@@ -89,6 +90,19 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
         public bool IsOperatingOn(DateTime date)
         {
             return date.Date >= StartDate.Date && (EndDate == null || date.Date <= EndDate.Value.Date);
+        }
+
+        public IReadOnlyList<string> GetSupportedDonationTypes()
+        {
+            return SupportedDonationTypes
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        public bool SupportsDonationType(DonationType donationType)
+        {
+            return GetSupportedDonationTypes().Contains(donationType.ToString(), StringComparer.OrdinalIgnoreCase);
         }
     }
 }

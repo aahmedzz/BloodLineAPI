@@ -43,6 +43,12 @@ public sealed class CreateAppointmentCommandHandler(
             return Result<CreateAppointmentResultDto>.Failure("Selected time is outside center operating hours.");
         }
 
+        if (!center.SupportsDonationType(request.DonationType))
+        {
+            var availableTypes = string.Join(", ", center.GetSupportedDonationTypes());
+            return Result<CreateAppointmentResultDto>.Failure($"This center does not support {request.DonationType} donation. Available types: {availableTypes}.");
+        }
+
         var bookingCount = await dbContext.DonationAppointments
             .Where(a => a.DonationCenterId == request.DonationCenterId)
             .Where(a => a.ScheduledDate == request.ScheduledDate.Date && a.StartTime == request.StartTime)
