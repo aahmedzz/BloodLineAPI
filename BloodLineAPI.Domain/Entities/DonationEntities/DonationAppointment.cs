@@ -5,8 +5,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
         public Guid DonorId { get; set; }
         public Guid DonationCenterId { get; set; }
         public DateTime ScheduledDate { get; set; }
-        public TimeSpan StartTime { get; set; }
-        public TimeSpan EndTime { get; set; }
+        public TimeSpan BookTime { get; set; }
         public string DonationType { get; set; } = string.Empty;
         public AppointmentStatus Status { get; set; } = AppointmentStatus.Pending;
 
