@@ -103,6 +103,23 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             CancelledAt = DateTime.UtcNow;
         }
 
+        public void CancelDueToIneligiblePreScreening()
+        {
+            if (Status is AppointmentStatus.Completed or AppointmentStatus.NoShow)
+            {
+                throw new DomainException("Cannot cancel an appointment that is already completed or marked as no-show.");
+            }
+
+            if (Status == AppointmentStatus.Cancelled)
+            {
+                return;
+            }
+
+            Status = AppointmentStatus.Cancelled;
+            CancellationReason = "Cancelled automatically due to ineligible health pre-screening.";
+            CancelledAt = DateTime.UtcNow;
+        }
+
         /// <summary>
         /// Reschedules the appointment to a new date/time/center.
         /// Operating hours validation is done by the handler; this method

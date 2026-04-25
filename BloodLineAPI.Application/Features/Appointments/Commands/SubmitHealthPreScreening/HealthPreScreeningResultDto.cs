@@ -2,4 +2,7 @@ namespace BloodLineAPI.Application.Features.Appointments.Commands.SubmitHealthPr
 
 public sealed record HealthPreScreeningResultDto(
     Guid ScreeningId,
-    bool IsEligible);
+    bool IsEligible,
+    string? IneligibilityReason,
+    string? Recommendation,
+    bool AppointmentCancelled);

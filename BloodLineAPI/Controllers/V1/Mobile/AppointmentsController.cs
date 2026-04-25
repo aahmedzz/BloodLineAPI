@@ -37,6 +37,23 @@ public sealed class AppointmentsController(ISender sender) : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<DonationCenterDto>>.Ok(result));
     }
 
+    [HttpGet("centers/main-branch")]
+    [ProducesResponseType(typeof(ApiResponse<DonationCenterDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMainBranchCenter(CancellationToken ct)
+    {
+        var result = await sender.Send(new GetDonationCentersQuery(null), ct);
+        var mainBranchCenter = result
+            .FirstOrDefault(center => string.Equals(center.CenterType, CenterType.MainBranch.ToString(), StringComparison.OrdinalIgnoreCase));
+
+        if (mainBranchCenter is null)
+        {
+            return NotFound(ApiResponse<object>.Fail("Main branch center was not found."));
+        }
+
+        return Ok(ApiResponse<DonationCenterDto>.Ok(mainBranchCenter));
+    }
+
     [HttpGet("time-slots")]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<TimeSlotDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTimeSlots([FromQuery] Guid centerId, [FromQuery] DateTime date, CancellationToken ct)

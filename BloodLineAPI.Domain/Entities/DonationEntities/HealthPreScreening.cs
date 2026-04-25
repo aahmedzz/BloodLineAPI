@@ -3,14 +3,14 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities;
 public class HealthPreScreening : AuditableEntity
 {
     public Guid DonorId { get; private set; }
-    public bool HasChronicDisease { get; private set; }
-    public bool HasRecentSurgery { get; private set; }
-    public bool IsTakingMedication { get; private set; }
-    public bool HasRecentTattooOrPiercing { get; private set; }
-    public bool HasRecentInfection { get; private set; }
-    public bool IsPregnantOrBreastfeeding { get; private set; }
-    public bool HasBleedingDisorder { get; private set; }
-    public bool HasRecentVaccination { get; private set; }
+    public bool HasBeenThreeToFourMonthsSinceLastDonation { get; private set; }
+    public bool HasAnyDisqualifyingCondition { get; private set; }
+    public bool IsTakingBloodThinnersOrCriticalMedication { get; private set; }
+    public bool HasRecentSurgeryInPast6Months { get; private set; }
+    public bool HasRecentTattooOrPiercingInPast6Months { get; private set; }
+    public bool HasReceivedBloodTransfusionWithinPastYear { get; private set; }
+    public bool HasCurrentFeverInfectionOrSevereCold { get; private set; }
+    public bool HasChronicIllnessAffectingBloodDonation { get; private set; }
     public bool IsEligible { get; private set; }
     public DateTime ScreenedAt { get; private set; }
 
@@ -22,28 +22,28 @@ public class HealthPreScreening : AuditableEntity
 
     public static HealthPreScreening Create(
         Guid donorId,
-        bool hasChronicDisease,
-        bool hasRecentSurgery,
-        bool isTakingMedication,
-        bool hasRecentTattooOrPiercing,
-        bool hasRecentInfection,
-        bool isPregnantOrBreastfeeding,
-        bool hasBleedingDisorder,
-        bool hasRecentVaccination)
+        bool hasBeenThreeToFourMonthsSinceLastDonation,
+        bool hasAnyDisqualifyingCondition,
+        bool isTakingBloodThinnersOrCriticalMedication,
+        bool hasRecentSurgeryInPast6Months,
+        bool hasRecentTattooOrPiercingInPast6Months,
+        bool hasReceivedBloodTransfusionWithinPastYear,
+        bool hasCurrentFeverInfectionOrSevereCold,
+        bool hasChronicIllnessAffectingBloodDonation)
     {
         var now = DateTime.UtcNow;
         var screening = new HealthPreScreening
         {
             Id = Guid.NewGuid(),
             DonorId = donorId,
-            HasChronicDisease = hasChronicDisease,
-            HasRecentSurgery = hasRecentSurgery,
-            IsTakingMedication = isTakingMedication,
-            HasRecentTattooOrPiercing = hasRecentTattooOrPiercing,
-            HasRecentInfection = hasRecentInfection,
-            IsPregnantOrBreastfeeding = isPregnantOrBreastfeeding,
-            HasBleedingDisorder = hasBleedingDisorder,
-            HasRecentVaccination = hasRecentVaccination,
+            HasBeenThreeToFourMonthsSinceLastDonation = hasBeenThreeToFourMonthsSinceLastDonation,
+            HasAnyDisqualifyingCondition = hasAnyDisqualifyingCondition,
+            IsTakingBloodThinnersOrCriticalMedication = isTakingBloodThinnersOrCriticalMedication,
+            HasRecentSurgeryInPast6Months = hasRecentSurgeryInPast6Months,
+            HasRecentTattooOrPiercingInPast6Months = hasRecentTattooOrPiercingInPast6Months,
+            HasReceivedBloodTransfusionWithinPastYear = hasReceivedBloodTransfusionWithinPastYear,
+            HasCurrentFeverInfectionOrSevereCold = hasCurrentFeverInfectionOrSevereCold,
+            HasChronicIllnessAffectingBloodDonation = hasChronicIllnessAffectingBloodDonation,
             ScreenedAt = now
         };
 
@@ -55,13 +55,13 @@ public class HealthPreScreening : AuditableEntity
 
     private bool EvaluateEligibility()
     {
-        return !HasChronicDisease
-            && !HasRecentSurgery
-            && !IsTakingMedication
-            && !HasRecentTattooOrPiercing
-            && !HasRecentInfection
-            && !IsPregnantOrBreastfeeding
-            && !HasBleedingDisorder
-            && !HasRecentVaccination;
+        return HasBeenThreeToFourMonthsSinceLastDonation
+            && !HasAnyDisqualifyingCondition
+            && !IsTakingBloodThinnersOrCriticalMedication
+            && !HasRecentSurgeryInPast6Months
+            && !HasRecentTattooOrPiercingInPast6Months
+            && !HasReceivedBloodTransfusionWithinPastYear
+            && !HasCurrentFeverInfectionOrSevereCold
+            && !HasChronicIllnessAffectingBloodDonation;
     }
 }

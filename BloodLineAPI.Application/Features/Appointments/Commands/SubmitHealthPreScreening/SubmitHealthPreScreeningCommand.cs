@@ -6,14 +6,14 @@ namespace BloodLineAPI.Application.Features.Appointments.Commands.SubmitHealthPr
 
 public sealed record SubmitHealthPreScreeningCommand(
     Guid AppointmentId,
-    bool HasChronicDisease,
-    bool HasRecentSurgery,
-    bool IsTakingMedication,
-    bool HasRecentTattooOrPiercing,
-    bool HasRecentInfection,
-    bool IsPregnantOrBreastfeeding,
-    bool HasBleedingDisorder,
-    bool HasRecentVaccination) : IRequest<Result<HealthPreScreeningResultDto>>
+    bool HasBeenThreeToFourMonthsSinceLastDonation,
+    bool HasAnyDisqualifyingCondition,
+    bool IsTakingBloodThinnersOrCriticalMedication,
+    bool HasRecentSurgeryInPast6Months,
+    bool HasRecentTattooOrPiercingInPast6Months,
+    bool HasReceivedBloodTransfusionWithinPastYear,
+    bool HasCurrentFeverInfectionOrSevereCold,
+    bool HasChronicIllnessAffectingBloodDonation) : IRequest<Result<HealthPreScreeningResultDto>>
 {
     [JsonIgnore]
     public Guid DonorId { get; init; }
