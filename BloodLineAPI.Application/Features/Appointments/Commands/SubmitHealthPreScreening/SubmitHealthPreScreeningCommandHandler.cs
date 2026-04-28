@@ -26,7 +26,7 @@ public sealed class SubmitHealthPreScreeningCommandHandler(IApplicationDbContext
             request.IsTakingBloodThinnersOrCriticalMedication,
             request.HasRecentSurgeryInPast6Months,
             request.HasRecentTattooOrPiercingInPast6Months,
-            request.HasReceivedBloodTransfusionWithinPastYear,
+            request.HasDentalProcedureInPastWeek,
             request.HasCurrentFeverInfectionOrSevereCold,
             request.HasChronicIllnessAffectingBloodDonation);
 
@@ -92,11 +92,11 @@ public sealed class SubmitHealthPreScreeningCommandHandler(IApplicationDbContext
                 "Please wait at least 6 months from the procedure date before donating.");
         }
 
-        if (request.HasReceivedBloodTransfusionWithinPastYear)
+        if (request.HasDentalProcedureInPastWeek)
         {
             return (
-                "You received a blood transfusion recently.",
-                "Please wait at least 12 months after transfusion before donating.");
+                "You recently had a dental procedure.",
+                "Please wait at least 7 days after your dental procedure before donating.");
         }
 
         if (request.HasChronicIllnessAffectingBloodDonation)

@@ -11,7 +11,7 @@ public sealed record SubmitHealthPreScreeningCommand(
     bool IsTakingBloodThinnersOrCriticalMedication,
     bool HasRecentSurgeryInPast6Months,
     bool HasRecentTattooOrPiercingInPast6Months,
-    bool HasReceivedBloodTransfusionWithinPastYear,
+    bool HasDentalProcedureInPastWeek,
     bool HasCurrentFeverInfectionOrSevereCold,
     bool HasChronicIllnessAffectingBloodDonation) : IRequest<Result<HealthPreScreeningResultDto>>
 {

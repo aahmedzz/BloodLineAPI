@@ -8,7 +8,7 @@ public class HealthPreScreening : AuditableEntity
     public bool IsTakingBloodThinnersOrCriticalMedication { get; private set; }
     public bool HasRecentSurgeryInPast6Months { get; private set; }
     public bool HasRecentTattooOrPiercingInPast6Months { get; private set; }
-    public bool HasReceivedBloodTransfusionWithinPastYear { get; private set; }
+    public bool HasDentalProcedureInPastWeek { get; private set; }
     public bool HasCurrentFeverInfectionOrSevereCold { get; private set; }
     public bool HasChronicIllnessAffectingBloodDonation { get; private set; }
     public bool IsEligible { get; private set; }
@@ -27,7 +27,7 @@ public class HealthPreScreening : AuditableEntity
         bool isTakingBloodThinnersOrCriticalMedication,
         bool hasRecentSurgeryInPast6Months,
         bool hasRecentTattooOrPiercingInPast6Months,
-        bool hasReceivedBloodTransfusionWithinPastYear,
+        bool hasDentalProcedureInPastWeek,
         bool hasCurrentFeverInfectionOrSevereCold,
         bool hasChronicIllnessAffectingBloodDonation)
     {
@@ -41,7 +41,7 @@ public class HealthPreScreening : AuditableEntity
             IsTakingBloodThinnersOrCriticalMedication = isTakingBloodThinnersOrCriticalMedication,
             HasRecentSurgeryInPast6Months = hasRecentSurgeryInPast6Months,
             HasRecentTattooOrPiercingInPast6Months = hasRecentTattooOrPiercingInPast6Months,
-            HasReceivedBloodTransfusionWithinPastYear = hasReceivedBloodTransfusionWithinPastYear,
+            HasDentalProcedureInPastWeek = hasDentalProcedureInPastWeek,
             HasCurrentFeverInfectionOrSevereCold = hasCurrentFeverInfectionOrSevereCold,
             HasChronicIllnessAffectingBloodDonation = hasChronicIllnessAffectingBloodDonation,
             ScreenedAt = now
@@ -60,7 +60,7 @@ public class HealthPreScreening : AuditableEntity
             && !IsTakingBloodThinnersOrCriticalMedication
             && !HasRecentSurgeryInPast6Months
             && !HasRecentTattooOrPiercingInPast6Months
-            && !HasReceivedBloodTransfusionWithinPastYear
+            && !HasDentalProcedureInPastWeek
             && !HasCurrentFeverInfectionOrSevereCold
             && !HasChronicIllnessAffectingBloodDonation;
     }
