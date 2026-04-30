@@ -7,6 +7,8 @@ namespace BloodLineAPI.Domain.Entities
         public string Type { get; set; } = string.Empty;
         public int Priority { get; set; }
         public bool IsRead { get; set; } = false;
+        public bool IsSent { get; set; } = false;
+        public string? SentVia { get; set; } // "fcm", "whatsapp", etc.
         public DateTime SentDate { get; set; }
 
         public Guid UserId { get; set; }

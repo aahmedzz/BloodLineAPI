@@ -11,6 +11,7 @@ namespace BloodLineAPI.Domain.Entities.Users
         public bool IsDeleted { get; set; } = false;
         public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+        public ICollection<DeviceToken> DeviceTokens { get; set; } = new List<DeviceToken>();
         public Donor? Donor { get; set; }
         public Staff? Staff { get; set; }
     }

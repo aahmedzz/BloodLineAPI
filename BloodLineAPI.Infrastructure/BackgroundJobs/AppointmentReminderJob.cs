@@ -1,4 +1,5 @@
 using BloodLineAPI.Application.Common.Interfaces;
+using BloodLineAPI.Domain.Entities;
 using BloodLineAPI.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,8 @@ public class AppointmentReminderJob(
             .Where(a => a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed)
             .Where(a => a.ScheduledDate >= now.Date && a.ScheduledDate <= maxHorizon.Date)
             .Include(a => a.DonationCenter)
+            .Include(a => a.Donor)
+                .ThenInclude(d => d.User)
             .ToListAsync(ct);
 
         foreach (var appt in appointments)
@@ -29,23 +32,53 @@ public class AppointmentReminderJob(
 
             if (minutesToStart is >= 1425 and <= 1455)
             {
-                await notificationSender.SendAsync(
+                await SendAndPersistAsync(
+                    appt.Donor.User.Id,
                     appt.DonorId,
                     "Appointment Reminder",
                     $"Your donation appointment at {appt.DonationCenter.Name} is tomorrow at {appt.StartTime:hh\\:mm}.",
+                    "appointment_reminder",
                     ct);
             }
 
             if (minutesToStart is >= 45 and <= 75)
             {
-                await notificationSender.SendAsync(
+                await SendAndPersistAsync(
+                    appt.Donor.User.Id,
                     appt.DonorId,
                     "Appointment Reminder",
                     $"Your donation appointment at {appt.DonationCenter.Name} starts at {appt.StartTime:hh\\:mm}.",
+                    "appointment_reminder",
                     ct);
             }
         }
 
         logger.LogInformation("Appointment reminder scan completed at {Now}.", now);
+    }
+
+    private async Task SendAndPersistAsync(Guid userId, Guid donorId, string title, string message, string type, CancellationToken ct)
+    {
+        var notification = new Notification
+        {
+            UserId = userId,
+            Title = title,
+            Message = message,
+            Type = type,
+            Priority = 1,
+            SentDate = DateTime.UtcNow,
+            IsSent = false
+        };
+
+        dbContext.Notifications.Add(notification);
+        await dbContext.SaveChangesAsync(ct);
+
+        var sent = await notificationSender.SendAsync(donorId, title, message, ct);
+
+        if (sent)
+        {
+            notification.IsSent = true;
+            notification.SentVia = "fcm";
+            await dbContext.SaveChangesAsync(ct);
+        }
     }
 }
