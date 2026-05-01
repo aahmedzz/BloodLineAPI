@@ -1,3 +1,4 @@
+using System.Text.Json;
 using BloodLineAPI.Application.Common.Interfaces;
 using BloodLineAPI.Domain.Entities;
 using BloodLineAPI.Domain.Enums;
@@ -37,7 +38,12 @@ public class AppointmentReminderJob(
                     appt.DonorId,
                     "Appointment Reminder",
                     $"Your donation appointment at {appt.DonationCenter.Name} is tomorrow at {appt.StartTime:hh\\:mm}.",
-                    "appointment_reminder",
+                    NotificationType.AppointmentReminder,
+                    JsonSerializer.Serialize(new Dictionary<string, string>
+                    {
+                        ["targetEntity"] = "DonationAppointment",
+                        ["targetId"] = appt.Id.ToString()
+                    }),
                     ct);
             }
 
@@ -48,7 +54,12 @@ public class AppointmentReminderJob(
                     appt.DonorId,
                     "Appointment Reminder",
                     $"Your donation appointment at {appt.DonationCenter.Name} starts at {appt.StartTime:hh\\:mm}.",
-                    "appointment_reminder",
+                    NotificationType.AppointmentReminder,
+                    JsonSerializer.Serialize(new Dictionary<string, string>
+                    {
+                        ["targetEntity"] = "DonationAppointment",
+                        ["targetId"] = appt.Id.ToString()
+                    }),
                     ct);
             }
         }
@@ -56,7 +67,7 @@ public class AppointmentReminderJob(
         logger.LogInformation("Appointment reminder scan completed at {Now}.", now);
     }
 
-    private async Task SendAndPersistAsync(Guid userId, Guid donorId, string title, string message, string type, CancellationToken ct)
+    private async Task SendAndPersistAsync(Guid userId, Guid donorId, string title, string message, NotificationType type, string? actionPayload, CancellationToken ct)
     {
         var notification = new Notification
         {
@@ -64,7 +75,7 @@ public class AppointmentReminderJob(
             Title = title,
             Message = message,
             Type = type,
-            Priority = 1,
+            ActionPayload = actionPayload,
             SentDate = DateTime.UtcNow,
             IsSent = false
         };

@@ -4,6 +4,7 @@ using BloodLineAPI.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BloodLineAPI.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260430001411_AddDeviceTokenTable")]
+    partial class AddDeviceTokenTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1127,10 +1130,6 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("ActionPayload")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit");
 
@@ -1140,6 +1139,9 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("SentDate")
                         .HasColumnType("datetime2");
@@ -1162,13 +1164,7 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "IsRead")
-                        .HasDatabaseName("IX_Notifications_UserId_IsRead")
-                        .HasFilter("[IsRead] = 0");
-
-                    b.HasIndex("UserId", "SentDate", "Id")
-                        .IsDescending(false, true, true)
-                        .HasDatabaseName("IX_Notifications_UserId_SentDate_Id");
+                    b.HasIndex("UserId");
 
                     b.ToTable("Notifications");
                 });

@@ -1,5 +1,6 @@
 using BloodLineAPI.Application.Common.Interfaces;
 using BloodLineAPI.Domain.Entities;
+using BloodLineAPI.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,8 +29,8 @@ public sealed class SendTestNotificationCommandHandler(
             UserId = request.UserId,
             Title = request.Title,
             Message = request.Message,
-            Type = "test",
-            Priority = 0,
+            Type = NotificationType.General,
+            ActionPayload = null,
             SentDate = DateTime.UtcNow,
             IsSent = false
         };
