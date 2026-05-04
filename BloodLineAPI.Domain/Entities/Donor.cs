@@ -2,6 +2,8 @@ namespace BloodLineAPI.Domain.Entities
 {
     public class Donor : AuditableEntity
     {
+        public int DonorNumber { get; private set; }
+        public string DonorCode { get; private set; } = string.Empty;
         public string FirstName { get; set; } = string.Empty;
         public string SecondName { get; set; } = string.Empty;
         public string ThirdName { get; set; } = string.Empty;
@@ -11,6 +13,8 @@ namespace BloodLineAPI.Domain.Entities
         public string? Governorate { get; set; }
         public string? District { get; set; }
         public string? Area { get; set; }
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
         public Gender Gender { get; set; }
         public string NationalId { get; set; } = string.Empty;
         public byte? BloodTypeId { get; set; }

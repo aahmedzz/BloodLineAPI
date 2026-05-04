@@ -14,6 +14,21 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<Donor> builder)
         {
             builder.HasKey(d => d.Id);
+
+            builder.Property(d => d.DonorNumber)
+                .UseIdentityColumn();
+
+            builder.Property(d => d.DonorCode)
+                .HasComputedColumnSql(
+                    "'DNR-' + CAST(YEAR([CreatedAt]) AS VARCHAR(4)) + '-' + " +
+                    "CASE WHEN [DonorNumber] < 10000 " +
+                    "THEN RIGHT('0000' + CAST([DonorNumber] AS VARCHAR(10)), 4) " +
+                    "ELSE CAST([DonorNumber] AS VARCHAR(10)) END",
+                    stored: false)
+                .HasMaxLength(20);
+
+            builder.HasIndex(d => d.DonorCode).IsUnique();
+
             builder.Property(d => d.FirstName).IsRequired().HasMaxLength(100);
             builder.Property(d => d.SecondName).IsRequired().HasMaxLength(100);
             builder.Property(d => d.ThirdName).IsRequired().HasMaxLength(100);

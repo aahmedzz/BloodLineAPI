@@ -17,8 +17,13 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
             builder.Property(s => s.EmployeeIdentifier).IsRequired().HasMaxLength(50);
             builder.HasIndex(s => s.EmployeeIdentifier).IsUnique();
             builder.Property(s => s.FirstName).IsRequired().HasMaxLength(100);
-            builder.Property(s => s.LastName).IsRequired().HasMaxLength(100);
+            builder.Property(s => s.SecondName).IsRequired().HasMaxLength(100);
+            builder.Property(s => s.ThirdName).IsRequired().HasMaxLength(100);
+            builder.Property(s => s.FourthName).IsRequired(false).HasMaxLength(100);
+            builder.Property(s => s.PhoneNumber).HasMaxLength(20);
+            builder.Property(s => s.Address).HasMaxLength(300);
             builder.Property(s => s.DepartmentName).HasMaxLength(100);
+            builder.Ignore(s => s.FullName);
             builder.HasOne(s => s.User)
                 .WithOne(u => u.Staff)
                 .HasForeignKey<Staff>(s => s.Id)

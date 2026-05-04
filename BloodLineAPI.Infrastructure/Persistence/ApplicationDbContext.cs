@@ -37,6 +37,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<DiscardRecord> DiscardRecords { get; set; } = null!;
     public DbSet<UrgentBloodAppeal> UrgentBloodAppeals { get; set; } = null!;
     public DbSet<DeviceToken> DeviceTokens { get; set; } = null!;
+    public DbSet<BloodStockThreshold> BloodStockThresholds { get; set; } = null!;
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

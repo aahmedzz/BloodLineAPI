@@ -10,6 +10,7 @@ namespace BloodLineAPI.Domain.Entities.BloodEntities
         public DateTime ExpiryDate { get; set; }
         public decimal Volume { get; set; }
         public BloodBagStatus Status { get; set; } = BloodBagStatus.Available;
+        public DonationType BagType { get; set; } = DonationType.WholeBlood;
 
         public BloodType BloodType { get; set; } = null!;
         public Staff CollectedByStaff { get; set; } = null!;

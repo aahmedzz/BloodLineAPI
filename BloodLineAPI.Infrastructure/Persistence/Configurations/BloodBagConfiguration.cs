@@ -18,6 +18,7 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
             builder.HasIndex(bb => bb.SerialNumber).IsUnique();
             builder.Property(bb => bb.Volume).HasPrecision(8, 2);
             builder.Property(bb => bb.Status).HasConversion<string>();
+            builder.Property(bb => bb.BagType).HasConversion<string>().HasMaxLength(50);
             builder.HasOne(bb => bb.BloodType)
                 .WithMany(bt => bt.BloodBags)
                 .HasForeignKey(bb => bb.BloodTypeId)

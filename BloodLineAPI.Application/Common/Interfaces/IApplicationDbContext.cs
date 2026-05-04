@@ -30,5 +30,6 @@ public interface IApplicationDbContext
     DbSet<DiscardRecord> DiscardRecords { get; }
     DbSet<UrgentBloodAppeal> UrgentBloodAppeals { get; }
     DbSet<DeviceToken> DeviceTokens { get; }
+    DbSet<BloodStockThreshold> BloodStockThresholds { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -3,7 +3,7 @@ namespace BloodLineAPI.Domain.Enums;
 public enum CenterStatus
 {
     Active,
-    Inactive,
+    Ended,
     UnderMaintenance,
     TemporarilyClosed
 }

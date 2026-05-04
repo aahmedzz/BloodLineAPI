@@ -16,6 +16,7 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
             builder.HasKey(da => da.Id);
             builder.Property(da => da.DonationType).HasConversion<string>().HasMaxLength(50);
             builder.Property(da => da.Status).HasConversion<string>().HasMaxLength(50);
+            builder.Property(da => da.Source).HasConversion<string>().HasMaxLength(50);
             builder.Property(da => da.CancellationReason).HasMaxLength(500);
             builder.Property(da => da.RowVersion).IsRowVersion();
             builder.HasOne(da => da.Donor)

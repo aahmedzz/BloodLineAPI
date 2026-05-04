@@ -8,11 +8,10 @@ namespace BloodLineAPI.Domain.Enums
 {
     public enum BloodBagStatus
     {
-        Available,
-        Reserved,
-        Used,
-        Expired,
-        Discarded,
-        Testing
+        Available = 0,
+        Expired = 3,
+        Discarded = 4,
+        Testing = 5,
+        Exported = 6
     }
 }

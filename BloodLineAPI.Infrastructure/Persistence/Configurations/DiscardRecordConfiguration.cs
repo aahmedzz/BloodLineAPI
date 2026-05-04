@@ -14,7 +14,8 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<DiscardRecord> builder)
         {
             builder.HasKey(dr => dr.Id);
-            builder.Property(dr => dr.Reason).IsRequired().HasMaxLength(500);
+            builder.Property(dr => dr.ReasonCategory).HasConversion<string>().HasMaxLength(50);
+            builder.Property(dr => dr.ReasonDetails).HasMaxLength(500);
             builder.HasOne(dr => dr.BloodBag)
                 .WithOne(bb => bb.DiscardRecord)
                 .HasForeignKey<DiscardRecord>(dr => dr.BloodBagId)

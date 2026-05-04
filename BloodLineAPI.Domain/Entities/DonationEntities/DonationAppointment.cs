@@ -10,6 +10,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
         public TimeSpan EndTime { get; private set; }
         public DonationType DonationType { get; private set; }
         public AppointmentStatus Status { get; private set; } = AppointmentStatus.Pending;
+        public DonationSource Source { get; private set; } = DonationSource.WalkIn;
         public string? CancellationReason { get; private set; }
         public DateTime? CancelledAt { get; private set; }
         public byte[] RowVersion { get; private set; } = [];
@@ -42,7 +43,8 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             DateTime? lastDonationDate,
             DateTime? activeLockoutUntil,
             Gender donorGender,
-            DonationCooldownSettings cooldownSettings)
+            DonationCooldownSettings cooldownSettings,
+            DonationSource source = DonationSource.WalkIn)
         {
             if (scheduledDate.Date < DateTime.UtcNow.Date)
             {
@@ -76,7 +78,8 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                 StartTime = startTime,
                 EndTime = startTime.Add(TimeSpan.FromMinutes(slotDurationMinutes)),
                 DonationType = donationType,
-                Status = AppointmentStatus.Pending
+                Status = AppointmentStatus.Pending,
+                Source = source
             };
         }
 

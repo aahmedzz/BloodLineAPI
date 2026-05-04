@@ -15,8 +15,16 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
         {
             builder.HasKey(bt => bt.Id);
             builder.Property(bt => bt.TestFileUrl).HasMaxLength(500);
-            builder.Property(bt => bt.HepatitisResult).HasMaxLength(50);
+            builder.Property(bt => bt.HepatitisCResult).HasMaxLength(50);
+            builder.Property(bt => bt.HepatitisBResult).HasMaxLength(50);
             builder.Property(bt => bt.HivResult).HasMaxLength(50);
+            builder.Property(bt => bt.SyphilisResult).HasMaxLength(50);
+            builder.Property(bt => bt.Notes).HasMaxLength(1000);
+            builder.HasOne(bt => bt.ConfirmedBloodType)
+                .WithMany()
+                .HasForeignKey(bt => bt.ConfirmedBloodTypeId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
             builder.HasOne(bt => bt.BloodBag)
                 .WithMany(bb => bb.BloodTestResults)
                 .HasForeignKey(bt => bt.BloodBagId)

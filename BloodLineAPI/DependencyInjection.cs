@@ -92,6 +92,7 @@ public static class DependencyInjection
                 AddJwtSecurity(options);
                 AddAudienceTagging(options);
                 AddApiResponseSchemaFix(options);
+                RemoveUnusedTags(options);
             });
         }
 
@@ -116,6 +117,42 @@ public static class DependencyInjection
             }
 
 
+            return Task.CompletedTask;
+        });
+    }
+
+    private static void RemoveUnusedTags(OpenApiOptions options)
+    {
+        options.AddDocumentTransformer((doc, ctx, ct) =>
+        {
+            if (doc.Paths is null || doc.Tags is null || doc.Tags.Count == 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            var usedTagNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var pathItem in doc.Paths.Values)
+            {
+                foreach (var operation in pathItem.Operations.Values)
+                {
+                    if (operation?.Tags is null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var tag in operation.Tags)
+                    {
+                        if (!string.IsNullOrWhiteSpace(tag.Name))
+                        {
+                            usedTagNames.Add(tag.Name);
+                        }
+                    }
+                }
+            }
+
+            doc.Tags = doc.Tags
+                .Where(tag => !string.IsNullOrWhiteSpace(tag.Name) && usedTagNames.Contains(tag.Name))
+                .ToHashSet();
             return Task.CompletedTask;
         });
     }
