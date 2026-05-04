@@ -11,6 +11,7 @@ using Hangfire.SqlServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using BloodLineAPI.Infrastructure.Messaging.Firebase;
 
 namespace BloodLineAPI.Infrastructure;
 
@@ -32,7 +33,19 @@ public static class DependencyInjection
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<IJwtGenerator, JwtGenerator>();
         services.AddScoped<IRegistrationOtpService, RegistrationOtpService>();
-        services.AddScoped<INotificationSender, NoOpNotificationSender>();
+
+        var firebaseSection = configuration.GetSection(FirebaseOptions.SectionName);
+        if (firebaseSection.Exists() && !string.IsNullOrWhiteSpace(firebaseSection["ServiceAccountKeyPath"]))
+        {
+            services.Configure<FirebaseOptions>(firebaseSection);
+            services.AddHostedService<FirebaseInitializer>();
+            services.AddScoped<INotificationSender, FirebaseNotificationSender>();
+        }
+        else
+        {
+            services.AddScoped<INotificationSender, NoOpNotificationSender>();
+        }
+
         services.AddScoped<AppointmentReminderJob>();
 
         services.Configure<DonationCooldownSettings>(configuration.GetSection("DonationCooldown"));
