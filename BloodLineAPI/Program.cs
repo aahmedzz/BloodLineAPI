@@ -7,6 +7,20 @@ using Hangfire;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("WebDashboard", policy =>
+    {
+        policy.WithOrigins(
+            "http://localhost:3000",
+            "http://localhost:5173"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials(); // REQUIRED for HttpOnly cookies
+    });
+});
+
 //Add the dependency injection for each layer of the application
 builder.Services.AddHttpContextAccessor();
 builder.Services
@@ -46,6 +60,9 @@ if (recurringJobManager is not null)
 {
     app.UseHangfireDashboard("/hangfire");
 }
+
+app.UseCors("WebDashboard");
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
