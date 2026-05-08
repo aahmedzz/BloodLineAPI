@@ -22,6 +22,11 @@ if (recurringJobManager is not null)
         "appointment-reminders",
         job => job.ExecuteAsync(CancellationToken.None),
         "*/15 * * * *");
+
+    recurringJobManager.AddOrUpdate<ChatHistoryCleanupJob>(
+        "chat-history-cleanup",
+        job => job.ExecuteAsync(CancellationToken.None),
+        "0 3 * * *"); // Daily at 3:00 AM UTC
 }
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();

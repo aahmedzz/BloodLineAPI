@@ -13,12 +13,16 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using BloodLineAPI.Infrastructure.Messaging.Firebase;
 
+using Microsoft.SemanticKernel;
+
 namespace BloodLineAPI.Infrastructure;
 
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddMemoryCache();
+
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(
                 configuration.GetConnectionString("DefaultConnection"),
@@ -47,6 +51,7 @@ public static class DependencyInjection
         }
 
         services.AddScoped<AppointmentReminderJob>();
+        services.AddScoped<ChatHistoryCleanupJob>();
 
         services.Configure<DonationCooldownSettings>(configuration.GetSection("DonationCooldown"));
         services.Configure<AppointmentSettings>(configuration.GetSection("Appointment"));
@@ -67,6 +72,35 @@ public static class DependencyInjection
                 client.BaseAddress = new Uri(options.BaseUrl);
             }
         });
+
+        // Chatbot (Gemini) configuration
+        var geminiApiKey = configuration["Gemini:ApiKey"];
+        var geminiModel = configuration["Gemini:Model"] ?? "gemini-flash-latest";
+
+        if (!string.IsNullOrWhiteSpace(geminiApiKey))
+        {
+            services.AddScoped<BloodLineAPI.Infrastructure.Chatbot.Plugins.BloodLineDataPlugin>();
+            services.AddScoped<BloodLineAPI.Infrastructure.Chatbot.Plugins.DonorProfilePlugin>();
+            services.AddSingleton<BloodLineAPI.Infrastructure.Chatbot.Plugins.DonationKnowledgePlugin>();
+
+            services.AddScoped<Kernel>(sp =>
+            {
+                var builder = Kernel.CreateBuilder();
+#pragma warning disable SKEXP0070
+                builder.AddGoogleAIGeminiChatCompletion(modelId: geminiModel, apiKey: geminiApiKey);
+#pragma warning restore SKEXP0070
+                builder.Plugins.AddFromObject(sp.GetRequiredService<BloodLineAPI.Infrastructure.Chatbot.Plugins.BloodLineDataPlugin>());
+                builder.Plugins.AddFromObject(sp.GetRequiredService<BloodLineAPI.Infrastructure.Chatbot.Plugins.DonationKnowledgePlugin>());
+                builder.Plugins.AddFromObject(sp.GetRequiredService<BloodLineAPI.Infrastructure.Chatbot.Plugins.DonorProfilePlugin>());
+                return builder.Build();
+            });
+            services.AddScoped<BloodLineAPI.Application.Common.Interfaces.IChatbotService, BloodLineAPI.Infrastructure.Chatbot.GeminiChatbotService>();
+        }
+        else
+        {
+            // Register a dummy service if the API key is not configured, otherwise MediatR validation fails
+            services.AddScoped<BloodLineAPI.Application.Common.Interfaces.IChatbotService, BloodLineAPI.Infrastructure.Chatbot.NoOpChatbotService>();
+        }
 
         return services;
     }

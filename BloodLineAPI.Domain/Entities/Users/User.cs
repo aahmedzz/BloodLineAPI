@@ -12,6 +12,7 @@ namespace BloodLineAPI.Domain.Entities.Users
         public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
         public ICollection<DeviceToken> DeviceTokens { get; set; } = new List<DeviceToken>();
+        public ICollection<ChatConversation> ChatConversations { get; set; } = new List<ChatConversation>();
         public Donor? Donor { get; set; }
         public Staff? Staff { get; set; }
     }
