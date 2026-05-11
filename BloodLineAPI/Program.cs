@@ -8,6 +8,7 @@ using Hangfire;
 var builder = WebApplication.CreateBuilder(args);
 
 //Add the dependency injection for each layer of the application
+builder.Services.AddHttpContextAccessor();
 builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration)

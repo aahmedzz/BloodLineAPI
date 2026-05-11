@@ -38,6 +38,15 @@ public class GlobalExceptionHandlingMiddleware(RequestDelegate next, ILogger<Glo
             var response = ApiResponse.Fail(ex.Message);
             await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonOptions));
         }
+        catch (KeyNotFoundException ex)
+        {
+            logger.LogWarning(ex, "Resource key not found");
+            context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+            context.Response.ContentType = "application/json";
+
+            var response = ApiResponse.Fail(ex.Message);
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response, JsonOptions));
+        }
         catch (DomainException ex)
         {
             logger.LogWarning(ex, "Domain rule violation");

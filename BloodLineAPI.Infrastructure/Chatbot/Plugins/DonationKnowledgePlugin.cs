@@ -204,4 +204,22 @@ public class DonationKnowledgePlugin
 
         return Task.FromResult(info);
     }
+
+    [KernelFunction, Description("Explains the flow of booking a donation appointment in the app. Useful when the user asks how to book an appointment or the steps to schedule a donation.")]
+    public Task<string> GetBookingFlowAsync()
+    {
+        const string info = """
+            Booking a Donation Appointment via the App:
+
+            1. Open the App: Log in to your account.
+            2. Find a Center: Go to the 'Campaigns' or 'Centers' section to find a convenient location.
+            3. Choose Date & Time: Select an available date and timeslot.
+            4. Confirm Eligibility: Briefly review the eligibility requirements shown.
+            5. Book: Click 'Book Appointment' to confirm.
+            6. Reminder: You will receive a notification reminder before your appointment.
+            7. Arrival: Arrive at the center at your scheduled time and present your app booking.
+            """;
+
+        return Task.FromResult(info);
+    }
 }
