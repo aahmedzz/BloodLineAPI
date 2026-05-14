@@ -62,10 +62,13 @@ public class GetChatbotResponseQueryHandler : IRequestHandler<GetChatbotResponse
         }
 
         // Load existing messages for the AI context (skip for new conversations)
+        // Taking the last 15 messages so we don't exceed model context limits
         var existingMessages = request.ConversationId.HasValue
             ? await _context.ChatMessages
                 .AsNoTracking()
                 .Where(m => m.ConversationId == conversation.Id)
+                .OrderByDescending(m => m.SentAt)
+                .Take(15)
                 .OrderBy(m => m.SentAt)
                 .Select(m => new ChatMessageDto
                 {

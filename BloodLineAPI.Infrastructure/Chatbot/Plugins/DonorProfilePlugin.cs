@@ -1,10 +1,12 @@
 using System.ComponentModel;
 using System.Text;
 using BloodLineAPI.Application.Common.Interfaces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
+using System.Security.Claims;
 
 namespace BloodLineAPI.Infrastructure.Chatbot.Plugins;
 
@@ -21,21 +23,24 @@ public class DonorProfilePlugin
     private readonly IApplicationDbContext _context;
     private readonly ILogger<DonorProfilePlugin> _logger;
     private readonly IMemoryCache _cache;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public DonorProfilePlugin(
         IApplicationDbContext context,
         ILogger<DonorProfilePlugin> logger,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
         _logger = logger;
         _cache = cache;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     [KernelFunction, Description("Gets the current donor's blood type information and what it means for compatibility. Useful when the user asks 'what is my blood type?', 'who can I donate to?', or 'who can donate to me?'.")]
-    public async Task<string> GetMyBloodTypeInfoAsync(Kernel kernel)
+    public async Task<string> GetMyBloodTypeInfoAsync()
     {
-        return await ExecuteForDonorAsync(kernel, "blood type info", async (donorId, ct) =>
+        return await ExecuteForDonorAsync("blood type info", async (donorId, ct) =>
         {
             var donor = await _context.Donors
                 .AsNoTracking()
@@ -69,9 +74,9 @@ public class DonorProfilePlugin
     }
 
     [KernelFunction, Description("Gets the donor's latest blood test / lab results and highlights any issues. Useful when the user asks 'what are my lab results?', 'are my test results safe?', 'do I have any health issues?', or 'my blood test'.")]
-    public async Task<string> GetMyLatestLabResultsAsync(Kernel kernel)
+    public async Task<string> GetMyLatestLabResultsAsync()
     {
-        return await ExecuteForDonorAsync(kernel, "lab results", async (donorId, ct) =>
+        return await ExecuteForDonorAsync("lab results", async (donorId, ct) =>
         {
             // Lab results are linked through: Donor -> DonationAppointment -> BloodBag -> BloodTestResult
             var latestResult = await _context.BloodTestResults
@@ -136,9 +141,9 @@ public class DonorProfilePlugin
     }
 
     [KernelFunction, Description("Gets the donor's donation history summary and when they can next donate. Useful when the user asks 'when can I donate again?', 'how many times have I donated?', 'my donation history', or 'next donation date'.")]
-    public async Task<string> GetMyDonationSummaryAsync(Kernel kernel)
+    public async Task<string> GetMyDonationSummaryAsync()
     {
-        return await ExecuteForDonorAsync(kernel, "donation summary", async (donorId, ct) =>
+        return await ExecuteForDonorAsync("donation summary", async (donorId, ct) =>
         {
             var donor = await _context.Donors
                 .AsNoTracking()
@@ -190,9 +195,9 @@ public class DonorProfilePlugin
     }
 
     [KernelFunction, Description("Gets the donor's latest medical screening result from the center visit. Useful when the user asks 'what was my medical screening result?', 'was I eligible last time?', 'why was I rejected?', or 'am I locked out?'.")]
-    public async Task<string> GetMyLatestMedicalScreeningAsync(Kernel kernel)
+    public async Task<string> GetMyLatestMedicalScreeningAsync()
     {
-        return await ExecuteForDonorAsync(kernel, "medical screening", async (donorId, ct) =>
+        return await ExecuteForDonorAsync("medical screening", async (donorId, ct) =>
         {
             var screening = await _context.MedicalScreenings
                 .AsNoTracking()
@@ -266,11 +271,10 @@ public class DonorProfilePlugin
     /// Every kernel function delegates to this method with its specific query logic.
     /// </summary>
     private async Task<string> ExecuteForDonorAsync(
-        Kernel kernel,
         string operationName,
         Func<Guid, CancellationToken, Task<string>> action)
     {
-        var donorId = GetDonorId(kernel);
+        var donorId = GetDonorId();
         if (donorId == Guid.Empty)
             return NotLoggedInMessage;
 
@@ -286,9 +290,10 @@ public class DonorProfilePlugin
         }
     }
 
-    private static Guid GetDonorId(Kernel kernel)
+    private Guid GetDonorId()
     {
-        if (kernel.Data.TryGetValue("donorId", out var value) && value is string idStr && Guid.TryParse(idStr, out var id))
+        var idStr = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrWhiteSpace(idStr) && Guid.TryParse(idStr, out var id))
             return id;
 
         return Guid.Empty;
