@@ -5,6 +5,6 @@ using MediatR;
 namespace BloodLineAPI.Application.Features.Auth.Commands.LoginStaffUser;
 
 public sealed record LoginStaffUserCommand(
-    string NationalId,
+    string Email,
     string Password
 ) : IRequest<Result<StaffAuthResponse>>;

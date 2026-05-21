@@ -21,7 +21,16 @@ public sealed class CreateStaffAccountCommandHandler(
             return Result<Guid>.Failure("Invalid role. Role must be Admin, Doctor, LabDoctor, or InventoryManager.");
         }
 
-        // 2. Check for existing user
+        // 2. Split full name into parts (same pattern as donor registration)
+        var nameParts = request.Name
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (nameParts.Length < 3)
+        {
+            return Result<Guid>.Failure("Full name must include at least 3 names.");
+        }
+
+        // 3. Check for existing user
         var normalizedUserName = userManager.NormalizeName(request.NationalId);
         var existingUser = await userManager.FindByNameAsync(normalizedUserName);
         if (existingUser != null)
@@ -31,12 +40,12 @@ public sealed class CreateStaffAccountCommandHandler(
 
         try
         {
-            // 3. Create User entity
+            // 4. Create User entity
             var user = new User
             {
                 UserName = request.NationalId,
                 Email = request.Email,
-                PhoneNumber = request.PhoneNumber,
+                PhoneNumber = request.Phone,
                 EmailConfirmed = true, // Trusted creation by Admin
                 PhoneNumberConfirmed = true // Trusted creation by Admin
             };
@@ -48,7 +57,7 @@ public sealed class CreateStaffAccountCommandHandler(
                 return Result<Guid>.Failure($"Failed to create user: {errors}");
             }
 
-            // 4. Assign role
+            // 5. Assign role
             var roleResult = await userManager.AddToRoleAsync(user, request.Role);
             if (!roleResult.Succeeded)
             {
@@ -56,18 +65,19 @@ public sealed class CreateStaffAccountCommandHandler(
                 return Result<Guid>.Failure($"Failed to assign role: {errors}");
             }
 
-            // 5. Create Staff entity linked to the user
+            // 6. Create Staff entity linked to the user
             var staff = new Staff
             {
                 Id = user.Id, // FK to User.Id
                 EmployeeIdentifier = $"EMP-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
-                FirstName = request.FirstName,
-                SecondName = request.SecondName,
-                ThirdName = request.ThirdName,
-                FourthName = request.FourthName,
-                PhoneNumber = request.PhoneNumber,
+                FirstName = nameParts[0],
+                SecondName = nameParts[1],
+                ThirdName = nameParts[2],
+                FourthName = nameParts.Length > 3 ? nameParts[3] : null,
+                PhoneNumber = request.Phone,
                 Address = request.Address,
-                DepartmentName = request.DepartmentName,
+                City = request.City,
+                DepartmentName = request.Role, // Department derived from the assigned role
                 IsActiveEmployee = true
             };
 

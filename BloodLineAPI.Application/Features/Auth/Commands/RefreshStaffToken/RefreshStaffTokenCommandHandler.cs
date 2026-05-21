@@ -39,6 +39,14 @@ public sealed class RefreshStaffTokenCommandHandler(
 
         var roles = await userManager.GetRolesAsync(user);
         var primaryRole = roles.FirstOrDefault() ?? string.Empty;
+        var mappedRole = primaryRole switch
+        {
+            "Admin" => "admin",
+            "Doctor" => "doctor",
+            "LabDoctor" => "lab",
+            "InventoryManager" => "inventory",
+            _ => primaryRole.ToLowerInvariant()
+        };
 
         var newAccessToken = jwtGenerator.GenerateToken(user, roles);
         var newRefreshToken = jwtGenerator.GenerateRefreshToken();
@@ -48,12 +56,16 @@ public sealed class RefreshStaffTokenCommandHandler(
         await userManager.UpdateAsync(user);
 
         var userPayload = new AuthenticatedStaffUser(
-            UserId: user.Id,
+            Id: user.Id,
+            Name: staff.FullName ?? string.Empty,
+            Email: user.Email ?? string.Empty,
+            Role: mappedRole,
             NationalId: user.UserName ?? string.Empty,
-            FullName: staff.FullName ?? string.Empty,
-            Role: primaryRole,
-            DepartmentName: staff.DepartmentName ?? string.Empty,
-            IsActiveEmployee: staff.IsActiveEmployee
+            Phone: staff.PhoneNumber ?? string.Empty,
+            Address: staff.Address ?? string.Empty,
+            City: staff.City ?? string.Empty,
+            Status: staff.IsActiveEmployee ? "active" : "inactive",
+            CreatedAt: staff.CreatedAt
         );
 
         return Result<StaffAuthResponse>.Success(new StaffAuthResponse(newAccessToken, newRefreshToken, userPayload));

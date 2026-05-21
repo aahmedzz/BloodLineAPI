@@ -6,9 +6,9 @@ public class LoginStaffUserCommandValidator : AbstractValidator<LoginStaffUserCo
 {
     public LoginStaffUserCommandValidator()
     {
-        RuleFor(v => v.NationalId)
-            .NotEmpty().WithMessage("National ID is required.")
-            .Length(14).WithMessage("National ID must be 14 digits.");
+        RuleFor(v => v.Email)
+            .NotEmpty().WithMessage("Email is required.")
+            .EmailAddress().WithMessage("Invalid email format.");
 
         RuleFor(v => v.Password)
             .NotEmpty().WithMessage("Password is required.")

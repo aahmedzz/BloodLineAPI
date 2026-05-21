@@ -4,15 +4,12 @@ using MediatR;
 namespace BloodLineAPI.Application.Features.Auth.Commands.CreateStaffAccount;
 
 public sealed record CreateStaffAccountCommand(
+    string Name,
     string NationalId,
     string Password,
-    string FirstName,
-    string SecondName,
-    string ThirdName,
-    string? FourthName,
-    string? PhoneNumber,
-    string? Email,
-    string? Address,
-    string DepartmentName,
-    string Role
+    string Role,
+    string Phone,
+    string Address,
+    string City,
+    string Email
 ) : IRequest<Result<Guid>>;

@@ -18,18 +18,16 @@ public sealed class LoginStaffUserCommandHandler(
 {
     public async Task<Result<StaffAuthResponse>> Handle(LoginStaffUserCommand request, CancellationToken cancellationToken)
     {
-        var identifier = request.NationalId?.Trim();
+        var email = request.Email?.Trim();
         var password = request.Password;
 
-        if (string.IsNullOrWhiteSpace(identifier) || string.IsNullOrWhiteSpace(password))
-            return Result<StaffAuthResponse>.Failure("National ID and password are required.");
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+            return Result<StaffAuthResponse>.Failure("Email and password are required.");
 
         try
         {
-            // For staff, we only allow login by NationalId (which is UserName)
-            var normalizedIdentifier = userManager.NormalizeName(identifier);
-            var user = await userManager.Users
-                .FirstOrDefaultAsync(u => u.NormalizedUserName == normalizedIdentifier, cancellationToken);
+            // Find user by email
+            var user = await userManager.FindByEmailAsync(email);
 
             if (user == null || user.IsDeleted)
                 return Result<StaffAuthResponse>.Failure("Invalid credentials.");
@@ -38,7 +36,7 @@ public sealed class LoginStaffUserCommandHandler(
 
             if (!signInResult.Succeeded)
             {
-                logger.LogWarning("Invalid login attempt for staff NationalId {NationalId}", identifier);
+                logger.LogWarning("Invalid login attempt for staff email {Email}", email);
                 return Result<StaffAuthResponse>.Failure("Invalid credentials.");
             }
 
@@ -68,16 +66,28 @@ public sealed class LoginStaffUserCommandHandler(
                 return Result<StaffAuthResponse>.Failure("User does not have the necessary permissions.");
             }
 
-            // For simplicity, just pick the first role. In a real app you might want to handle multiple roles.
+            // Map role to frontend format
             var primaryRole = roles.FirstOrDefault() ?? string.Empty;
+            var mappedRole = primaryRole switch
+            {
+                "Admin" => "admin",
+                "Doctor" => "doctor",
+                "LabDoctor" => "lab",
+                "InventoryManager" => "inventory",
+                _ => primaryRole.ToLowerInvariant()
+            };
 
             var userPayload = new AuthenticatedStaffUser(
-                UserId: user.Id,
+                Id: user.Id,
+                Name: staff.FullName ?? string.Empty,
+                Email: user.Email ?? string.Empty,
+                Role: mappedRole,
                 NationalId: user.UserName ?? string.Empty,
-                FullName: staff.FullName ?? string.Empty,
-                Role: primaryRole,
-                DepartmentName: staff.DepartmentName ?? string.Empty,
-                IsActiveEmployee: staff.IsActiveEmployee
+                Phone: staff.PhoneNumber ?? string.Empty,
+                Address: staff.Address ?? string.Empty,
+                City: staff.City ?? string.Empty,
+                Status: staff.IsActiveEmployee ? "active" : "inactive",
+                CreatedAt: staff.CreatedAt
             );
 
             var refreshToken = jwtGenerator.GenerateRefreshToken();
@@ -100,7 +110,7 @@ public sealed class LoginStaffUserCommandHandler(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error while processing staff login for NationalId {NationalId}", identifier);
+            logger.LogError(ex, "Error while processing staff login for email {Email}", email);
             return Result<StaffAuthResponse>.Failure("An error occurred while processing the request.");
         }
     }

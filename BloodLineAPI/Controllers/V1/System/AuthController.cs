@@ -1,13 +1,15 @@
 using Asp.Versioning;
 using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Application.Common.Models.Auth;
+using BloodLineAPI.Application.Features.Auth.Commands.ChangeStaffPassword;
 using BloodLineAPI.Application.Features.Auth.Commands.LoginStaffUser;
 using BloodLineAPI.Application.Features.Auth.Commands.RefreshStaffToken;
+using BloodLineAPI.Application.Features.Auth.Queries.GetCurrentStaffUser;
 using BloodLineAPI.Attributes;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace BloodLineAPI.Controllers.V1.System;
 
@@ -21,8 +23,13 @@ public class AuthController(ISender sender) : ControllerBase
     private const string AccessTokenCookie = "access_token";
     private const string RefreshTokenCookie = "refresh_token";
 
+    /// <summary>
+    /// Login with email and password. Tokens are set as HttpOnly cookies.
+    /// </summary>
     [HttpPost("login")]
     [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<AuthenticatedStaffUser>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Login([FromBody] LoginStaffUserCommand command, CancellationToken ct)
     {
         var result = await sender.Send(command, ct);
@@ -37,11 +44,35 @@ public class AuthController(ISender sender) : ControllerBase
         return Ok(ApiResponse<AuthenticatedStaffUser>.Ok(data.User));
     }
 
-    [HttpPost("refresh-token")]
+    /// <summary>
+    /// Get the currently authenticated staff user's info from session cookie.
+    /// </summary>
+    [HttpGet("me")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<AuthenticatedStaffUser>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetMe(CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(ApiResponse<object>.Fail("Invalid or missing authentication token."));
+
+        var result = await sender.Send(new GetCurrentStaffUserQuery(userId), ct);
+        if (!result.IsSuccess)
+            return Unauthorized(ApiResponse<object>.Fail(result.Error!));
+
+        return Ok(ApiResponse<AuthenticatedStaffUser>.Ok(result.Data!));
+    }
+
+    /// <summary>
+    /// Rotate tokens via HttpOnly cookies. No request body needed.
+    /// </summary>
+    [HttpPost("refresh")]
     [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<AuthenticatedStaffUser>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> RefreshToken(CancellationToken ct)
     {
-        // 1. EXTRACT FROM COOKIES: Read tokens directly from HttpOnly cookies
         var accessToken = Request.Cookies[AccessTokenCookie];
         var refreshToken = Request.Cookies[RefreshTokenCookie];
 
@@ -61,6 +92,30 @@ public class AuthController(ISender sender) : ControllerBase
         return Ok(ApiResponse<AuthenticatedStaffUser>.Ok(data.User));
     }
 
+    /// <summary>
+    /// Change the authenticated user's password.
+    /// </summary>
+    [HttpPost("change-password")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangeStaffPasswordCommand command, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(ApiResponse<object>.Fail("Invalid or missing authentication token."));
+
+        var result = await sender.Send(command with { UserId = userId }, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
+
+        return Ok(ApiResponse<object>.Ok(null!, message: result.Data!));
+    }
+
+    /// <summary>
+    /// Logout by clearing authentication cookies.
+    /// </summary>
     [HttpPost("logout")]
     public IActionResult Logout()
     {
@@ -70,7 +125,6 @@ public class AuthController(ISender sender) : ControllerBase
 
     private void SetTokenCookies(string accessToken, string refreshToken)
     {
-        // 2. PATH ISOLATION: Scoped tightly to minimize attack surface
         Response.Cookies.Append(AccessTokenCookie, accessToken, new CookieOptions
         {
             HttpOnly = true,

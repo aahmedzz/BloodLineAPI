@@ -2,6 +2,7 @@ using BloodLineAPI;
 using BloodLineAPI.Application;
 using BloodLineAPI.Infrastructure;
 using BloodLineAPI.Infrastructure.BackgroundJobs;
+using BloodLineAPI.Infrastructure.Seeding;
 using BloodLineAPI.Middleware;
 using Hangfire;
 
@@ -29,6 +30,9 @@ builder.Services
     .AddPresentation(builder.Configuration);
 
 var app = builder.Build();
+
+// Seed default admin account for testing
+await AdminAccountSeeder.SeedAdminAccountAsync(app.Services);
 
 var recurringJobManager = app.Services.GetService<IRecurringJobManager>();
 if (recurringJobManager is not null)

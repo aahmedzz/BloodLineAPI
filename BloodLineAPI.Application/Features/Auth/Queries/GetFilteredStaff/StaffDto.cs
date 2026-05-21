@@ -1,6 +1,8 @@
-namespace BloodLineAPI.Application.Common.Models.Auth;
+using System;
 
-public record AuthenticatedStaffUser(
+namespace BloodLineAPI.Application.Features.Auth.Queries.GetFilteredStaff;
+
+public record StaffDto(
     Guid Id,
     string Name,
     string Email,
@@ -10,4 +12,4 @@ public record AuthenticatedStaffUser(
     string Address,
     string City,
     string Status,
-    DateTime CreatedAt);
+    string CreatedAt);
