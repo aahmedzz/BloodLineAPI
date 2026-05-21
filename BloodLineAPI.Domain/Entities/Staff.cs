@@ -11,6 +11,7 @@ namespace BloodLineAPI.Domain.Entities
         public bool IsActiveEmployee { get; set; } = true;
         public string? PhoneNumber { get; set; }
         public string? Address { get; set; }
+        public string? City { get; set; }
 
         public string FullName => string.Join(" ", new[] { FirstName, SecondName, ThirdName, FourthName }
             .Where(static n => !string.IsNullOrWhiteSpace(n)));

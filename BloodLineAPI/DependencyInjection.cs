@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddControllers(options =>
         {
             options.Filters.Add<ApiResponseWrapperFilter>();
+            options.Filters.Add<AntiCsrfHeaderFilter>();
         }).AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
@@ -54,6 +55,28 @@ public static class DependencyInjection
                 ValidAudience = jwtSettings["Audience"],
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
+            };
+
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    // Priority 1: Check standard Authorization header (Mobile App / Swagger)
+                    var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+                    if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+                    {
+                        // Token is in the header; let the default middleware handle it
+                        return Task.CompletedTask;
+                    }
+
+                    // Priority 2: Fallback to HttpOnly cookie (Web Dashboard)
+                    if (context.Request.Cookies.TryGetValue("access_token", out var cookieToken))
+                    {
+                        context.Token = cookieToken;
+                    }
+
+                    return Task.CompletedTask;
+                }
             };
         });
 

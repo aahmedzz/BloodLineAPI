@@ -22,6 +22,7 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
             builder.Property(s => s.FourthName).IsRequired(false).HasMaxLength(100);
             builder.Property(s => s.PhoneNumber).HasMaxLength(20);
             builder.Property(s => s.Address).HasMaxLength(300);
+            builder.Property(s => s.City).IsRequired(false).HasMaxLength(100);
             builder.Property(s => s.DepartmentName).HasMaxLength(100);
             builder.Ignore(s => s.FullName);
             builder.HasOne(s => s.User)
