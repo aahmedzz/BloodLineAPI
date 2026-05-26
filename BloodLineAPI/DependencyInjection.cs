@@ -1,3 +1,5 @@
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using BloodLineAPI.Attributes;
@@ -11,6 +13,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
+using BloodLineAPI.Application.Common.Interfaces;
+using BloodLineAPI.Services;
 
 namespace BloodLineAPI;
 
@@ -20,13 +24,17 @@ public static class DependencyInjection
 
     public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+
         services.AddControllers(options =>
+
         {
             options.Filters.Add<ApiResponseWrapperFilter>();
             options.Filters.Add<AntiCsrfHeaderFilter>();
         }).AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+            options.JsonSerializerOptions.Encoder = JavaScriptEncoder.Create(UnicodeRanges.All);
         });
 
         services.AddIdentity<User, Role>()

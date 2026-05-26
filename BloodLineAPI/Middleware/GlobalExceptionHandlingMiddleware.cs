@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text.Json;
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
 using BloodLineAPI.Application.Common.Exceptions;
 using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Domain.Common;
@@ -11,7 +13,8 @@ public class GlobalExceptionHandlingMiddleware(RequestDelegate next, ILogger<Glo
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
     };
 
     public async Task InvokeAsync(HttpContext context)

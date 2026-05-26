@@ -14,7 +14,8 @@ namespace BloodLineAPI.Application.Features.Appointments.Commands.CreateAppointm
 
 public sealed class CreateAppointmentCommandHandler(
     IApplicationDbContext dbContext,
-    IOptions<DonationCooldownSettings> cooldownOptions)
+    IOptions<DonationCooldownSettings> cooldownOptions,
+    IDonorEligibilityService eligibilityService)
     : IRequestHandler<CreateAppointmentCommand, Result<CreateAppointmentResultDto>>
 {
     public async Task<Result<CreateAppointmentResultDto>> Handle(CreateAppointmentCommand request, CancellationToken cancellationToken)
@@ -58,13 +59,22 @@ public sealed class CreateAppointmentCommandHandler(
         var donor = await dbContext.Donors.FirstOrDefaultAsync(d => d.Id == request.DonorId, cancellationToken)
             ?? throw new NotFoundException(nameof(Donor), request.DonorId);
 
-        // Query active lockout using the correct DonorId FK + LockoutUntil
-        var activeLockout = await dbContext.MedicalScreenings
-            .Where(ms => ms.DonorId == request.DonorId && !ms.IsEligible)
-            .Where(ms => ms.LockoutUntil != null && ms.LockoutUntil > DateTime.UtcNow)
-            .OrderByDescending(ms => ms.LockoutUntil)
-            .Select(ms => ms.LockoutUntil)
-            .FirstOrDefaultAsync(cancellationToken);
+        // Centralised eligibility check (lockout, cooldown, status)
+        var eligibility = await eligibilityService.CheckEligibilityAsync(
+            donor.Id, request.DonationType, cancellationToken);
+
+        if (!eligibility.IsSuccess)
+        {
+            return Result<CreateAppointmentResultDto>.Failure(eligibility.Error!);
+        }
+
+        if (!eligibility.Data!.IsEligible)
+        {
+            return Result<CreateAppointmentResultDto>.Failure(eligibility.Data.RejectionReason!);
+        }
+
+        // Query active lockout for domain-level Book() guard (kept for defence-in-depth)
+        var activeLockout = eligibility.Data.DeferredUntil;
 
         var slotDuration = center.SlotDurationMinutes ?? 15;
 
@@ -81,7 +91,8 @@ public sealed class CreateAppointmentCommandHandler(
             donor.LastDonationDate,
             activeLockout,
             donor.Gender,
-            cooldownOptions.Value);
+            cooldownOptions.Value,
+            source: DonationSource.MobileApp);
 
         dbContext.DonationAppointments.Add(appointment);
         await dbContext.SaveChangesAsync(cancellationToken);

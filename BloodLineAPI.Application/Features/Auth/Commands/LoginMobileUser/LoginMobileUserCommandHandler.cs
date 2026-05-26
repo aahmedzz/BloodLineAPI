@@ -1,4 +1,4 @@
-﻿using BloodLineAPI.Application.Common.Interfaces;
+using BloodLineAPI.Application.Common.Interfaces;
 using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Domain.Entities.Users;
 using MediatR;
@@ -53,7 +53,7 @@ public sealed class LoginMobileUserCommandHandler(
                 var unverifiedUserPayload = new AuthenticatedMobileUser(
                     user.Id,
                     user.UserName ?? string.Empty,
-                    user.PhoneNumber,
+                    user.PhoneNumber ?? string.Empty,
                     string.Empty,
                     false,
                     false);

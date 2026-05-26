@@ -9,7 +9,6 @@ namespace BloodLineAPI.Application.Features.Auth.Commands.VerifyMobileRegistrati
 
 public sealed class VerifyMobileRegistrationOtpCommandHandler(
     UserManager<User> userManager,
-    IApplicationDbContext dbContext,
     IJwtGenerator jwtGenerator)
     : IRequestHandler<VerifyMobileRegistrationOtpCommand, Result<string>>
 {

@@ -18,6 +18,9 @@ public class MedicalScreening : AuditableEntity
     public string? RejectionReason { get; set; }
     public DateTime? LockoutUntil { get; set; }
 
+    public Guid? DonationAppointmentId { get; set; }
+    public DonationAppointment? DonationAppointment { get; set; }
+
     public Donor Donor { get; set; } = null!;
     public Staff PerformedByStaff { get; set; } = null!;
 }

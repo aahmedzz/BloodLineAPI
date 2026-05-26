@@ -1,5 +1,7 @@
 using System.Reflection;
 using BloodLineAPI.Application.Common.Behaviors;
+using BloodLineAPI.Application.Common.Interfaces;
+using BloodLineAPI.Application.Common.Services;
 using BloodLineAPI.Application.Features.Gamification.Interfaces;
 using BloodLineAPI.Application.Features.Gamification.Services;
 using FluentValidation;
@@ -19,6 +21,7 @@ public static class DependencyInjection
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
         services.AddTransient<IGamificationService, GamificationService>();
+        services.AddTransient<IDonorEligibilityService, DonorEligibilityService>();
 
         var pointRuleType = typeof(IPointRule);
         var badgeRuleType = typeof(IBadgeRule);

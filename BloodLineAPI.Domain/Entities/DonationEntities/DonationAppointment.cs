@@ -1,3 +1,5 @@
+using BloodLineAPI.Domain.Events;
+
 namespace BloodLineAPI.Domain.Entities.DonationEntities
 {
     public class DonationAppointment : AuditableEntity
@@ -8,18 +10,26 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
         public DateTime ScheduledDate { get; private set; }
         public TimeSpan StartTime { get; private set; }
         public TimeSpan EndTime { get; private set; }
-        public DonationType DonationType { get; private set; }
+        public DonationType DonationType { get; set; }
         public AppointmentStatus Status { get; private set; } = AppointmentStatus.Pending;
         public DonationSource Source { get; private set; } = DonationSource.WalkIn;
         public string? CancellationReason { get; private set; }
         public DateTime? CancelledAt { get; private set; }
         public byte[] RowVersion { get; private set; } = [];
 
+        // New properties for system donation flow
+        public int DonationNumber { get; private set; }
+        public string DonationCode { get; private set; } = string.Empty;
+        public DonationStatus DonationStatus { get; private set; } = DonationStatus.Pending;
+        public bool SentToLab { get; private set; } = false;
+        public Guid? MedicalScreeningId { get; private set; }
+
         public Donor Donor { get; set; } = null!;
         public DonationCenter DonationCenter { get; set; } = null!;
         public HealthPreScreening? HealthPreScreening { get; set; }
         public BloodBag? BloodBag { get; set; }
         public DonationRating? DonationRating { get; set; }
+        public MedicalScreening? MedicalScreening { get; set; }
 
         private DonationAppointment()
         {
@@ -217,6 +227,129 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             }
 
             Status = AppointmentStatus.NoShow;
+        }
+
+        public static DonationAppointment RegisterSystemDonation(
+            Guid donorId,
+            Guid donationCenterId,
+            DonationType donationType,
+            DonationSource source,
+            bool isNewDonor,
+            bool hasAppAccount)
+        {
+            var now = DateTime.UtcNow;
+            var appointment = new DonationAppointment
+            {
+                Id = Guid.NewGuid(),
+                DonorId = donorId,
+                DonationCenterId = donationCenterId,
+                ScheduledDate = now.Date,
+                StartTime = now.TimeOfDay,
+                EndTime = now.TimeOfDay,
+                DonationType = donationType,
+                Status = AppointmentStatus.Confirmed,
+                Source = source,
+                DonationStatus = DonationStatus.Pending,
+                SentToLab = false
+            };
+
+            appointment.AddDomainEvent(new DonationRegisteredEvent(
+                donorId,
+                appointment.Id,
+                source,
+                donationType,
+                isNewDonor,
+                hasAppAccount,
+                now));
+
+            return appointment;
+        }
+
+        public void UpdateSystemDonation(Guid donationCenterId, DonationSource source)
+        {
+            if (DonationStatus != DonationStatus.Pending)
+            {
+                throw new DomainException("Only pending donations can be updated.");
+            }
+
+            var now = DateTime.UtcNow;
+            DonationCenterId = donationCenterId;
+            Source = source;
+            ScheduledDate = now.Date;
+            StartTime = now.TimeOfDay;
+            EndTime = now.TimeOfDay;
+            Status = AppointmentStatus.Confirmed;
+        }
+
+        public void AttachMedicalScreening(Guid screeningId)
+        {
+            if (DonationStatus != DonationStatus.Pending)
+            {
+                throw new DomainException("Medical screening can only be attached to pending donations.");
+            }
+
+            MedicalScreeningId = screeningId;
+            DonationStatus = DonationStatus.Approved;
+
+            AddDomainEvent(new DonationScreeningCompletedEvent(
+                DonorId,
+                Id,
+                screeningId,
+                true,
+                DateTime.UtcNow));
+        }
+
+        public void RejectAfterScreening(Guid screeningId, string? rejectionReason = null)
+        {
+            if (DonationStatus != DonationStatus.Pending)
+            {
+                throw new DomainException("Medical screening can only be attached to pending donations.");
+            }
+
+            MedicalScreeningId = screeningId;
+            DonationStatus = DonationStatus.Rejected;
+
+            Status = AppointmentStatus.Cancelled;
+            CancellationReason = rejectionReason ?? "Cancelled automatically due to ineligible medical screening.";
+            CancelledAt = DateTime.UtcNow;
+
+            AddDomainEvent(new DonationScreeningCompletedEvent(
+                DonorId,
+                Id,
+                screeningId,
+                false,
+                DateTime.UtcNow));
+        }
+
+        public void SendToLab(Guid bloodBagId)
+        {
+            if (DonationStatus != DonationStatus.Approved)
+            {
+                throw new DomainException("Donation must be approved to send to lab.");
+            }
+
+            SentToLab = true;
+            DonationStatus = DonationStatus.Completed;
+            MarkCompleted();
+
+            AddDomainEvent(new DonationSentToLabEvent(
+                DonorId,
+                Id,
+                bloodBagId,
+                DateTime.UtcNow));
+        }
+
+        public void CancelDonation()
+        {
+            if (DonationStatus is DonationStatus.Completed or DonationStatus.Cancelled or DonationStatus.Rejected)
+            {
+                throw new DomainException("Cannot cancel a completed, rejected, or already cancelled donation.");
+            }
+
+            DonationStatus = DonationStatus.Cancelled;
+            Status = AppointmentStatus.Cancelled;
+            CancellationReason = "Problem in collecting the blood donation.";
+            CancelledAt = DateTime.UtcNow;
         }
 
         private static string FormatGracePeriod(int minutes)
