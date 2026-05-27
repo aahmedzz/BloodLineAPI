@@ -45,11 +45,6 @@ public sealed class ConfirmDonationCommandHandler(
             return Result<string>.Failure("Donor not found for this donation.");
         }
 
-        if (!donor.BloodTypeId.HasValue)
-        {
-            return Result<string>.Failure("Donor must have a blood type specified before confirming the donation.");
-        }
-
         var doctorUserId = Guid.Parse(currentUserService.UserId!);
         var now = DateTime.UtcNow;
 
@@ -79,7 +74,7 @@ public sealed class ConfirmDonationCommandHandler(
         {
             Id = Guid.NewGuid(),
             SerialNumber = donation.DonationCode,
-            BloodTypeId = donor.BloodTypeId.Value,
+            BloodTypeId = donor.BloodTypeId,
             CollectedByStaffId = doctorUserId,
             DonationAppointmentId = donation.Id,
             CollectionDate = now,

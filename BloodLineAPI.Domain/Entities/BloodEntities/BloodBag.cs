@@ -3,7 +3,7 @@ namespace BloodLineAPI.Domain.Entities.BloodEntities
     public class BloodBag : AuditableEntity
     {
         public string SerialNumber { get; set; } = string.Empty;
-        public byte BloodTypeId { get; set; }
+        public byte? BloodTypeId { get; set; }
         public Guid CollectedByStaffId { get; set; }
         public Guid? DonationAppointmentId { get; set; }
         public DateTime CollectionDate { get; set; }
@@ -12,7 +12,7 @@ namespace BloodLineAPI.Domain.Entities.BloodEntities
         public BloodBagStatus Status { get; set; } = BloodBagStatus.Available;
         public DonationType BagType { get; set; } = DonationType.WholeBlood;
 
-        public BloodType BloodType { get; set; } = null!;
+        public BloodType? BloodType { get; set; }
         public Staff CollectedByStaff { get; set; } = null!;
         public DonationAppointment? DonationAppointment { get; set; }
         public ICollection<BloodTestResult> BloodTestResults { get; set; } = new List<BloodTestResult>();
