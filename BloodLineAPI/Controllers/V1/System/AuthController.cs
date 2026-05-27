@@ -129,7 +129,7 @@ public class AuthController(ISender sender) : ControllerBase
         {
             HttpOnly = true,
             Secure = true, // Ensure we use HTTPS in production
-            SameSite = SameSiteMode.Strict,
+            SameSite = SameSiteMode.None,
             Path = "/api", // Available to all API endpoints
             Expires = DateTimeOffset.UtcNow.AddMinutes(60) 
         });
@@ -138,7 +138,7 @@ public class AuthController(ISender sender) : ControllerBase
         {
             HttpOnly = true,
             Secure = true, // Ensure we use HTTPS in production
-            SameSite = SameSiteMode.Strict,
+            SameSite = SameSiteMode.None,
             Path = "/api/v1/system/auth", // Restricted exclusively to the auth controller
             Expires = DateTimeOffset.UtcNow.AddDays(7)
         });
@@ -146,7 +146,17 @@ public class AuthController(ISender sender) : ControllerBase
 
     private void ClearTokenCookies()
     {
-        Response.Cookies.Delete(AccessTokenCookie, new CookieOptions { Path = "/api" });
-        Response.Cookies.Delete(RefreshTokenCookie, new CookieOptions { Path = "/api/v1/system/auth" });
+        Response.Cookies.Delete(AccessTokenCookie, new CookieOptions 
+        { 
+            Path = "/api",
+            SameSite = SameSiteMode.None,
+            Secure = true
+        });
+        Response.Cookies.Delete(RefreshTokenCookie, new CookieOptions 
+        { 
+            Path = "/api/v1/system/auth",
+            SameSite = SameSiteMode.None,
+            Secure = true
+        });
     }
 }

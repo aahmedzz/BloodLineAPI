@@ -14,7 +14,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
             "http://localhost:3000",
-            "http://localhost:5173"
+            "http://localhost:5173",
+            "https://blood-bank-system-6eaj.vercel.app"
         )
         .AllowAnyHeader()
         .AllowAnyMethod()
