@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace BloodLineAPI.Application.Features.Appointments.Queries.GetSystemAppointmentById;
 
-public sealed class GetSystemAppointmentByIdQueryHandler(IApplicationDbContext dbContext)
+public sealed class GetSystemAppointmentByIdQueryHandler(IApplicationDbContext dbContext, IDateTimeProvider dateTimeProvider)
     : IRequestHandler<GetSystemAppointmentByIdQuery, Result<SystemAppointmentDetailsDto>>
 {
     public async Task<Result<SystemAppointmentDetailsDto>> Handle(GetSystemAppointmentByIdQuery request, CancellationToken cancellationToken)
@@ -27,7 +27,7 @@ public sealed class GetSystemAppointmentByIdQueryHandler(IApplicationDbContext d
             return Result<SystemAppointmentDetailsDto>.Failure("Appointment not found.");
         }
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = dateTimeProvider.CurrentLocalDate;
         var age = today.Year - appointment.Donor.DateOfBirth.Year;
         if (appointment.Donor.DateOfBirth > today.AddYears(-age)) age--;
 

@@ -35,6 +35,7 @@ public static class DependencyInjection
             sp.GetRequiredService<ApplicationDbContext>());
 
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+        services.AddSingleton<IDateTimeProvider, Services.DateTimeProvider>();
         services.AddScoped<IJwtGenerator, JwtGenerator>();
         services.AddScoped<IRegistrationOtpService, RegistrationOtpService>();
 

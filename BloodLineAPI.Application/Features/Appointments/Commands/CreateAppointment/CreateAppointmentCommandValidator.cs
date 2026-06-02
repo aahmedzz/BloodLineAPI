@@ -1,3 +1,4 @@
+using BloodLineAPI.Application.Common.Interfaces;
 using BloodLineAPI.Domain.Enums;
 using FluentValidation;
 
@@ -5,7 +6,7 @@ namespace BloodLineAPI.Application.Features.Appointments.Commands.CreateAppointm
 
 public sealed class CreateAppointmentCommandValidator : AbstractValidator<CreateAppointmentCommand>
 {
-    public CreateAppointmentCommandValidator()
+    public CreateAppointmentCommandValidator(IDateTimeProvider dateTimeProvider)
     {
         RuleFor(x => x.DonorId).NotEmpty();
         RuleFor(x => x.DonationCenterId).NotEmpty();
@@ -13,7 +14,7 @@ public sealed class CreateAppointmentCommandValidator : AbstractValidator<Create
         RuleFor(x => x.DonationType)
             .IsInEnum().WithMessage("Invalid donation type.");
         RuleFor(x => x.ScheduledDate)
-            .Must(d => d.Date >= DateTime.UtcNow.Date)
+            .Must(d => d.Date >= dateTimeProvider.LocalNow.Date)
             .WithMessage("Scheduled date cannot be in the past.");
     }
 }

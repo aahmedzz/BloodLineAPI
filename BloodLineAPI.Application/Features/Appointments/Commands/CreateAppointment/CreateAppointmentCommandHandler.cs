@@ -15,7 +15,8 @@ namespace BloodLineAPI.Application.Features.Appointments.Commands.CreateAppointm
 public sealed class CreateAppointmentCommandHandler(
     IApplicationDbContext dbContext,
     IOptions<DonationCooldownSettings> cooldownOptions,
-    IDonorEligibilityService eligibilityService)
+    IDonorEligibilityService eligibilityService,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<CreateAppointmentCommand, Result<CreateAppointmentResultDto>>
 {
     public async Task<Result<CreateAppointmentResultDto>> Handle(CreateAppointmentCommand request, CancellationToken cancellationToken)
@@ -26,12 +27,12 @@ public sealed class CreateAppointmentCommandHandler(
             .FirstOrDefaultAsync(c => c.Id == request.DonationCenterId, cancellationToken)
             ?? throw new NotFoundException(nameof(DonationCenter), request.DonationCenterId);
 
-        if (request.ScheduledDate.Date < DateTime.UtcNow.Date)
+        if (DateOnly.FromDateTime(request.ScheduledDate) < dateTimeProvider.CurrentLocalDate)
         {
             return Result<CreateAppointmentResultDto>.Failure("Cannot book an appointment in the past.");
         }
 
-        if (request.ScheduledDate.Date == DateTime.UtcNow.Date && request.StartTime < DateTime.UtcNow.TimeOfDay)
+        if (DateOnly.FromDateTime(request.ScheduledDate) == dateTimeProvider.CurrentLocalDate && request.StartTime < dateTimeProvider.CurrentLocalTimeOfDay)
         {
             return Result<CreateAppointmentResultDto>.Failure("Cannot book a time slot that has already passed.");
         }
@@ -102,6 +103,7 @@ public sealed class CreateAppointmentCommandHandler(
             activeLockout,
             donor.Gender,
             cooldownOptions.Value,
+            dateTimeProvider.LocalNow,
             source: DonationSource.MobileApp);
 
         dbContext.DonationAppointments.Add(appointment);

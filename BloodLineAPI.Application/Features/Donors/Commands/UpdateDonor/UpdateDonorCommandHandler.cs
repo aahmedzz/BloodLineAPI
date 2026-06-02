@@ -15,7 +15,7 @@ using BloodLineAPI.Application.Features.Donors.Queries.GetFilteredDonors;
 
 namespace BloodLineAPI.Application.Features.Donors.Commands.UpdateDonor;
 
-public sealed class UpdateDonorCommandHandler(IApplicationDbContext dbContext)
+public sealed class UpdateDonorCommandHandler(IApplicationDbContext dbContext, IDateTimeProvider dateTimeProvider)
     : IRequestHandler<UpdateDonorCommand, Result<FilteredDonorDto>>
 {
     public async Task<Result<FilteredDonorDto>> Handle(
@@ -159,7 +159,7 @@ public sealed class UpdateDonorCommandHandler(IApplicationDbContext dbContext)
             .OrderByDescending(ms => ms.ScreeningDate)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var dto = FilteredDonorDto.MapFrom(updatedDonor, latestScreening);
+        var dto = FilteredDonorDto.MapFrom(updatedDonor, latestScreening, dateTimeProvider.CurrentLocalDate);
 
         return Result<FilteredDonorDto>.Success(dto);
     }

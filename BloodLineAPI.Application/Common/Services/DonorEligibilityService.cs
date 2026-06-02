@@ -18,7 +18,8 @@ namespace BloodLineAPI.Application.Common.Services;
 /// </summary>
 public sealed class DonorEligibilityService(
     IApplicationDbContext dbContext,
-    IOptions<DonationCooldownSettings> cooldownOptions)
+    IOptions<DonationCooldownSettings> cooldownOptions,
+    IDateTimeProvider dateTimeProvider)
     : IDonorEligibilityService
 {
     public async Task<Result<DonorEligibilityResult>> CheckEligibilityAsync(
@@ -47,7 +48,7 @@ public sealed class DonorEligibilityService(
         // 2. Lockout / Deferral check — query only the latest failed screening with active lockout
         var activeLockout = await dbContext.MedicalScreenings
             .Where(ms => ms.DonorId == donorId && !ms.IsEligible)
-            .Where(ms => ms.LockoutUntil != null && ms.LockoutUntil > DateTime.UtcNow)
+            .Where(ms => ms.LockoutUntil != null && ms.LockoutUntil > dateTimeProvider.UtcNow)
             .OrderByDescending(ms => ms.LockoutUntil)
             .Select(ms => new { ms.LockoutUntil, ms.RejectionReason })
             .FirstOrDefaultAsync(cancellationToken);
@@ -65,7 +66,7 @@ public sealed class DonorEligibilityService(
         if (donor.LastDonationDate.HasValue)
         {
             var cooldownDays = cooldownOptions.Value.GetCooldownDays(donationType, donor.Gender);
-            var daysSinceLast = (DateTime.UtcNow.Date - donor.LastDonationDate.Value.Date).TotalDays;
+            var daysSinceLast = (dateTimeProvider.CurrentLocalDate.ToDateTime(TimeOnly.MinValue) - donor.LastDonationDate.Value.Date).TotalDays;
 
             if (daysSinceLast < cooldownDays)
             {

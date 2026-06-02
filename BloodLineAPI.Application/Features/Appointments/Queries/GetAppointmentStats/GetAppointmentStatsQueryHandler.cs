@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace BloodLineAPI.Application.Features.Appointments.Queries.GetAppointmentStats;
 
-public sealed class GetAppointmentStatsQueryHandler(IApplicationDbContext dbContext)
+public sealed class GetAppointmentStatsQueryHandler(IApplicationDbContext dbContext, IDateTimeProvider dateTimeProvider)
     : IRequestHandler<GetAppointmentStatsQuery, Result<AppointmentStatsDto>>
 {
     public async Task<Result<AppointmentStatsDto>> Handle(GetAppointmentStatsQuery request, CancellationToken cancellationToken)
@@ -58,8 +58,8 @@ public sealed class GetAppointmentStatsQueryHandler(IApplicationDbContext dbCont
         }
         else
         {
-            startDate = DateTime.UtcNow.Date;
-            endDate = DateTime.UtcNow.Date;
+            startDate = dateTimeProvider.LocalNow.Date;
+            endDate = dateTimeProvider.LocalNow.Date;
         }
 
         // Fetch all appointments for the date range (excluding pending ones)

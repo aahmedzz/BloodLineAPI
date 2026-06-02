@@ -12,7 +12,8 @@ namespace BloodLineAPI.Application.Features.Appointments.Commands.RescheduleAppo
 
 public sealed class RescheduleAppointmentCommandHandler(
     IApplicationDbContext dbContext,
-    IOptions<AppointmentSettings> appointmentSettings)
+    IOptions<AppointmentSettings> appointmentSettings,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<RescheduleAppointmentCommand, Result<CreateAppointmentResultDto>>
 {
     public async Task<Result<CreateAppointmentResultDto>> Handle(RescheduleAppointmentCommand request, CancellationToken cancellationToken)
@@ -26,12 +27,12 @@ public sealed class RescheduleAppointmentCommandHandler(
             ?? throw new NotFoundException("DonationAppointment", request.AppointmentId);
 
         var center = appointment.DonationCenter;
-        if (request.NewScheduledDate.Date < DateTime.UtcNow.Date)
+        if (DateOnly.FromDateTime(request.NewScheduledDate) < dateTimeProvider.CurrentLocalDate)
         {
             return Result<CreateAppointmentResultDto>.Failure("Cannot reschedule to a past date.");
         }
 
-        if (request.NewScheduledDate.Date == DateTime.UtcNow.Date && request.NewStartTime < DateTime.UtcNow.TimeOfDay)
+        if (DateOnly.FromDateTime(request.NewScheduledDate) == dateTimeProvider.CurrentLocalDate && request.NewStartTime < dateTimeProvider.CurrentLocalTimeOfDay)
         {
             return Result<CreateAppointmentResultDto>.Failure("Cannot reschedule to a time slot that has already passed.");
         }
@@ -70,6 +71,7 @@ public sealed class RescheduleAppointmentCommandHandler(
             slotDuration,
             bookingCount,
             maxPerSlot,
+            dateTimeProvider.LocalNow,
             appointmentSettings.Value.GracePeriodMinutes);
 
         await dbContext.SaveChangesAsync(cancellationToken);

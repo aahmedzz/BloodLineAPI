@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BloodLineAPI.Application.Features.Donations.Commands.DeleteDonation;
 
-public sealed class DeleteDonationCommandHandler(IApplicationDbContext dbContext)
+public sealed class DeleteDonationCommandHandler(IApplicationDbContext dbContext, IDateTimeProvider dateTimeProvider)
     : IRequestHandler<DeleteDonationCommand, Result<string>>
 {
     public async Task<Result<string>> Handle(
@@ -27,7 +27,7 @@ public sealed class DeleteDonationCommandHandler(IApplicationDbContext dbContext
 
         try
         {
-            donation.CancelDonation();
+            donation.CancelDonation(dateTimeProvider.LocalNow);
             await dbContext.SaveChangesAsync(cancellationToken);
             return Result<string>.Success("Donation cancelled successfully.");
         }

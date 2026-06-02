@@ -5,12 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BloodLineAPI.Application.Features.Appointments.Queries.GetDonorAppointments;
 
-public sealed class GetDonorAppointmentsQueryHandler(IApplicationDbContext dbContext)
+public sealed class GetDonorAppointmentsQueryHandler(IApplicationDbContext dbContext, IDateTimeProvider dateTimeProvider)
     : IRequestHandler<GetDonorAppointmentsQuery, IReadOnlyList<AppointmentListItemDto>>
 {
     public async Task<IReadOnlyList<AppointmentListItemDto>> Handle(GetDonorAppointmentsQuery request, CancellationToken cancellationToken)
     {
-        var now = DateTime.UtcNow;
+        var now = dateTimeProvider.LocalNow;
 
         var query = dbContext.DonationAppointments
             .AsNoTracking()

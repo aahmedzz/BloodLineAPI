@@ -13,7 +13,8 @@ namespace BloodLineAPI.Application.Features.Donations.Commands.ConfirmDonation;
 
 public sealed class ConfirmDonationCommandHandler(
     ICurrentUserService currentUserService,
-    IApplicationDbContext dbContext)
+    IApplicationDbContext dbContext,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<ConfirmDonationCommand, Result<string>>
 {
     public async Task<Result<string>> Handle(
@@ -46,7 +47,7 @@ public sealed class ConfirmDonationCommandHandler(
         }
 
         var doctorUserId = Guid.Parse(currentUserService.UserId!);
-        var now = DateTime.UtcNow;
+        var now = dateTimeProvider.LocalNow;
 
         // Guard: DonationCode is a computed column — verify it was populated from DB
         if (string.IsNullOrEmpty(donation.DonationCode))
@@ -87,7 +88,7 @@ public sealed class ConfirmDonationCommandHandler(
         await dbContext.BloodBags.AddAsync(bloodBag, cancellationToken);
 
         // Update Donation Status through domain method (transitions DonationStatus -> Completed, raises event)
-        donation.SendToLab(bloodBag.Id);
+        donation.SendToLab(bloodBag.Id, now);
 
         // Update Donor stats
         donor.LastDonationDate = now;

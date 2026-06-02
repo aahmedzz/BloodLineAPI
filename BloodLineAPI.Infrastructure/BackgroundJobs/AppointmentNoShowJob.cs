@@ -11,11 +11,12 @@ namespace BloodLineAPI.Infrastructure.BackgroundJobs;
 
 public class AppointmentNoShowJob(
     IApplicationDbContext dbContext,
-    ILogger<AppointmentNoShowJob> logger)
+    ILogger<AppointmentNoShowJob> logger,
+    IDateTimeProvider dateTimeProvider)
 {
     public async Task ExecuteAsync(CancellationToken ct = default)
     {
-        var now = DateTime.UtcNow;
+        var now = dateTimeProvider.LocalNow;
 
         if (dbContext is DbContext efContext)
         {
@@ -41,7 +42,7 @@ public class AppointmentNoShowJob(
             {
                 try
                 {
-                    app.MarkNoShow();
+                    app.MarkNoShow(now);
                     noShowCount++;
                 }
                 catch (Exception ex)

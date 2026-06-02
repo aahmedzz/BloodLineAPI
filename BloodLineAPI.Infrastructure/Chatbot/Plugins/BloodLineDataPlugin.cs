@@ -12,15 +12,18 @@ public class BloodLineDataPlugin
     private readonly IApplicationDbContext _context;
     private readonly ILogger<BloodLineDataPlugin> _logger;
     private readonly IMemoryCache _cache;
+    private readonly IDateTimeProvider _dateTimeProvider;
 
     public BloodLineDataPlugin(
         IApplicationDbContext context, 
         ILogger<BloodLineDataPlugin> logger, 
-        IMemoryCache cache)
+        IMemoryCache cache,
+        IDateTimeProvider dateTimeProvider)
     {
         _context = context;
         _logger = logger;
         _cache = cache;
+        _dateTimeProvider = dateTimeProvider;
     }
 
     [KernelFunction, Description("Gets a list of all currently active blood donation campaigns. Useful when the user asks about campaigns or where they can donate in mobile campaigns.")]
@@ -195,9 +198,9 @@ public class BloodLineDataPlugin
         }
     }
 
-    private static string FormatTime(TimeSpan time)
+    private string FormatTime(TimeSpan time)
     {
-        var dateTime = DateTime.Today.Add(time);
+        var dateTime = _dateTimeProvider.LocalNow.Date.Add(time);
         return dateTime.ToString("hh:mm tt");
     }
 }

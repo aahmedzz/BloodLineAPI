@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BloodLineAPI.Application.Features.Donors.Queries.SearchDonorByNationalId;
 
-public sealed class SearchDonorByNationalIdQueryHandler(IApplicationDbContext dbContext)
+public sealed class SearchDonorByNationalIdQueryHandler(IApplicationDbContext dbContext, IDateTimeProvider dateTimeProvider)
     : IRequestHandler<SearchDonorByNationalIdQuery, Result<FilteredDonorDto>>
 {
     public async Task<Result<FilteredDonorDto>> Handle(
@@ -41,7 +41,7 @@ public sealed class SearchDonorByNationalIdQueryHandler(IApplicationDbContext db
             .OrderByDescending(ms => ms.ScreeningDate)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var dto = FilteredDonorDto.MapFrom(donor, latestScreening);
+        var dto = FilteredDonorDto.MapFrom(donor, latestScreening, dateTimeProvider.CurrentLocalDate);
 
         return Result<FilteredDonorDto>.Success(dto);
     }

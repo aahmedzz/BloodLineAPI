@@ -6,7 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BloodLineAPI.Application.Features.Appointments.Queries.GetAvailableTimeSlots;
 
-public sealed class GetAvailableTimeSlotsQueryHandler(IApplicationDbContext dbContext)
+public sealed class GetAvailableTimeSlotsQueryHandler(
+    IApplicationDbContext dbContext,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<GetAvailableTimeSlotsQuery, IReadOnlyList<TimeSlotDto>>
 {
     public async Task<IReadOnlyList<TimeSlotDto>> Handle(GetAvailableTimeSlotsQuery request, CancellationToken cancellationToken)
@@ -17,7 +19,7 @@ public sealed class GetAvailableTimeSlotsQueryHandler(IApplicationDbContext dbCo
             .FirstOrDefaultAsync(c => c.Id == request.DonationCenterId, cancellationToken)
             ?? throw new NotFoundException("DonationCenter", request.DonationCenterId);
 
-        if (request.Date.Date < DateTime.UtcNow.Date || !center.IsOperatingOn(request.Date))
+        if (DateOnly.FromDateTime(request.Date) < dateTimeProvider.CurrentLocalDate || !center.IsOperatingOn(request.Date))
         {
             return [];
         }
@@ -28,8 +30,8 @@ public sealed class GetAvailableTimeSlotsQueryHandler(IApplicationDbContext dbCo
             return [];
         }
 
-        var nowTime = DateTime.UtcNow.TimeOfDay;
-        var availableSlots = request.Date.Date == DateTime.UtcNow.Date
+        var nowTime = dateTimeProvider.CurrentLocalTimeOfDay;
+        var availableSlots = DateOnly.FromDateTime(request.Date) == dateTimeProvider.CurrentLocalDate
             ? slots.Where(s => s.Start >= nowTime).ToList()
             : slots.ToList();
 

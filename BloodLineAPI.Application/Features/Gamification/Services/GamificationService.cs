@@ -10,7 +10,8 @@ namespace BloodLineAPI.Application.Features.Gamification.Services;
 public sealed class GamificationService(
     IEnumerable<IPointRule> pointRules,
     IEnumerable<IBadgeRule> badgeRules,
-    IApplicationDbContext dbContext) : IGamificationService
+    IApplicationDbContext dbContext,
+    IDateTimeProvider dateTimeProvider) : IGamificationService
 {
     public async Task ProcessAsync(GamificationContext context, CancellationToken cancellationToken)
     {
@@ -24,14 +25,16 @@ public sealed class GamificationService(
             return;
         }
 
-        var monthKey = context.OccurredOn.ToString("yyyy-MM");
-        var currentMonthKey = DateTime.UtcNow.ToString("yyyy-MM");
+        var localOccurredOn = dateTimeProvider.ToLocalTime(context.OccurredOn);
+        var localContext = context with { OccurredOn = localOccurredOn };
+        var monthKey = localOccurredOn.ToString("yyyy-MM");
+        var currentMonthKey = dateTimeProvider.LocalNow.ToString("yyyy-MM");
         var totalAwardedPoints = 0;
         var monthlyAwardedPoints = 0;
 
         foreach (var pointRule in pointRules)
         {
-            var result = await pointRule.EvaluateAsync(context, cancellationToken);
+            var result = await pointRule.EvaluateAsync(localContext, cancellationToken);
             if (result is null || result.Points <= 0)
             {
                 continue;
@@ -64,7 +67,7 @@ public sealed class GamificationService(
                 continue;
             }
 
-            var earned = await badgeRule.IsEarnedAsync(context, cancellationToken);
+            var earned = await badgeRule.IsEarnedAsync(localContext, cancellationToken);
             if (!earned)
             {
                 continue;

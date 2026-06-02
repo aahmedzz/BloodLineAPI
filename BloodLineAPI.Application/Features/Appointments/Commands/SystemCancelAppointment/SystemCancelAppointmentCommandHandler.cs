@@ -12,7 +12,8 @@ namespace BloodLineAPI.Application.Features.Appointments.Commands.SystemCancelAp
 
 public sealed class SystemCancelAppointmentCommandHandler(
     IApplicationDbContext dbContext,
-    IMediator mediator)
+    IMediator mediator,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<SystemCancelAppointmentCommand, Result<string>>
 {
     public async Task<Result<string>> Handle(SystemCancelAppointmentCommand request, CancellationToken cancellationToken)
@@ -23,7 +24,7 @@ public sealed class SystemCancelAppointmentCommandHandler(
             ?? throw new NotFoundException("DonationAppointment", request.AppointmentId);
 
         // Cancel with gracePeriodMinutes = 0 to allow staff/doctors to cancel anytime
-        appointment.Cancel(request.Reason?.Trim() ?? "Cancelled by staff", gracePeriodMinutes: 0);
+        appointment.Cancel(request.Reason?.Trim() ?? "Cancelled by staff", dateTimeProvider.LocalNow, gracePeriodMinutes: 0);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

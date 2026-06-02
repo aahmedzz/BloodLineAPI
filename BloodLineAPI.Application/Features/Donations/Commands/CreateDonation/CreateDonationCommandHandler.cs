@@ -18,7 +18,8 @@ public sealed class CreateDonationCommandHandler(
     UserManager<User> userManager,
     RoleManager<Role> roleManager,
     IApplicationDbContext dbContext,
-    IDonorEligibilityService eligibilityService)
+    IDonorEligibilityService eligibilityService,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<CreateDonationCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(
@@ -205,11 +206,12 @@ public sealed class CreateDonationCommandHandler(
             return Result<Guid>.Failure("Donation center not found.");
         }
 
-        var (slotStart, slotEnd) = center.FindSlotForTime(DateTime.UtcNow);
+        var localNow = dateTimeProvider.LocalNow;
+        var (slotStart, slotEnd) = center.FindSlotForTime(localNow);
 
         if (existingPendingDonation != null)
         {
-            existingPendingDonation.UpdateSystemDonation(request.DonationCenterId, sourceEnum, slotStart, slotEnd);
+            existingPendingDonation.UpdateSystemDonation(request.DonationCenterId, sourceEnum, slotStart, slotEnd, localNow);
             await dbContext.SaveChangesAsync(cancellationToken);
             return Result<Guid>.Success(existingPendingDonation.Id);
         }
@@ -226,7 +228,8 @@ public sealed class CreateDonationCommandHandler(
             isNewDonor: isNewDonor,
             hasAppAccount: hasAppAccount,
             slotStart: slotStart,
-            slotEnd: slotEnd
+            slotEnd: slotEnd,
+            currentLocalTime: localNow
         );
 
         await dbContext.DonationAppointments.AddAsync(appointment, cancellationToken);

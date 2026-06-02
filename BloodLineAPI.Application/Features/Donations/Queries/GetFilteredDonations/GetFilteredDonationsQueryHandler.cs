@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BloodLineAPI.Application.Features.Donations.Queries.GetFilteredDonations;
 
-public sealed class GetFilteredDonationsQueryHandler(IApplicationDbContext dbContext)
+public sealed class GetFilteredDonationsQueryHandler(IApplicationDbContext dbContext, IDateTimeProvider dateTimeProvider)
     : IRequestHandler<GetFilteredDonationsQuery, Result<PaginatedDonationResult>>
 {
     public async Task<Result<PaginatedDonationResult>> Handle(
@@ -98,7 +98,7 @@ public sealed class GetFilteredDonationsQueryHandler(IApplicationDbContext dbCon
         }
 
         // 6. Map to DTOs in memory
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = dateTimeProvider.CurrentLocalDate;
         var mappedData = new List<DonationListDto>();
 
         foreach (var da in donationsList)

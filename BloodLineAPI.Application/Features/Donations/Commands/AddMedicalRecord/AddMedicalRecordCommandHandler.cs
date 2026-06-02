@@ -15,7 +15,8 @@ namespace BloodLineAPI.Application.Features.Donations.Commands.AddMedicalRecord;
 
 public sealed class AddMedicalRecordCommandHandler(
     ICurrentUserService currentUserService,
-    IApplicationDbContext dbContext)
+    IApplicationDbContext dbContext,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<AddMedicalRecordCommand, Result<string>>
 {
     public async Task<Result<string>> Handle(
@@ -91,7 +92,7 @@ public sealed class AddMedicalRecordCommandHandler(
             Id = Guid.NewGuid(),
             DonorId = donor.Id,
             PerformedByStaffId = doctorUserId,
-            ScreeningDate = DateTime.UtcNow,
+            ScreeningDate = dateTimeProvider.LocalNow,
             Weight = request.AdditionalData.Weight,
             SystolicBP = systolic,
             DiastolicBP = diastolic,
@@ -128,17 +129,17 @@ public sealed class AddMedicalRecordCommandHandler(
                 oldDonorStatus,
                 newDonorStatus,
                 request.RejectionReason ?? "Medical screening results",
-                DateTime.UtcNow));
+                dateTimeProvider.LocalNow));
         }
 
         // Update Donation status
         if (screening.IsEligible)
         {
-            donation.AttachMedicalScreening(screening.Id);
+            donation.AttachMedicalScreening(screening.Id, dateTimeProvider.LocalNow);
         }
         else
         {
-            donation.RejectAfterScreening(screening.Id, screening.RejectionReason);
+            donation.RejectAfterScreening(screening.Id, dateTimeProvider.LocalNow, screening.RejectionReason);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

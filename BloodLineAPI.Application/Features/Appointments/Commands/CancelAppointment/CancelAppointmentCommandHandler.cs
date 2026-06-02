@@ -14,7 +14,8 @@ namespace BloodLineAPI.Application.Features.Appointments.Commands.CancelAppointm
 public sealed class CancelAppointmentCommandHandler(
     IApplicationDbContext dbContext,
     IOptions<AppointmentSettings> appointmentSettings,
-    IMediator mediator)
+    IMediator mediator,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<CancelAppointmentCommand, Result<string>>
 {
     public async Task<Result<string>> Handle(CancelAppointmentCommand request, CancellationToken cancellationToken)
@@ -26,7 +27,7 @@ public sealed class CancelAppointmentCommandHandler(
 
         var wasConfirmed = appointment.Status == AppointmentStatus.Confirmed;
 
-        appointment.Cancel(request.Reason?.Trim() ?? "Cancelled by donor", appointmentSettings.Value.GracePeriodMinutes);
+        appointment.Cancel(request.Reason?.Trim() ?? "Cancelled by donor", dateTimeProvider.LocalNow, appointmentSettings.Value.GracePeriodMinutes);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

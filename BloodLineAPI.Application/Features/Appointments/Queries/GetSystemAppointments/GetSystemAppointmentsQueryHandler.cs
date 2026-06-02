@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace BloodLineAPI.Application.Features.Appointments.Queries.GetSystemAppointments;
 
-public sealed class GetSystemAppointmentsQueryHandler(IApplicationDbContext dbContext)
+public sealed class GetSystemAppointmentsQueryHandler(IApplicationDbContext dbContext, IDateTimeProvider dateTimeProvider)
     : IRequestHandler<GetSystemAppointmentsQuery, Result<PaginatedAppointmentsResult>>
 {
     public async Task<Result<PaginatedAppointmentsResult>> Handle(GetSystemAppointmentsQuery request, CancellationToken cancellationToken)
@@ -64,8 +64,8 @@ public sealed class GetSystemAppointmentsQueryHandler(IApplicationDbContext dbCo
         }
         else
         {
-            startDate = DateTime.UtcNow.Date;
-            endDate = DateTime.UtcNow.Date;
+            startDate = dateTimeProvider.LocalNow.Date;
+            endDate = dateTimeProvider.LocalNow.Date;
         }
 
         // Fetch appointments matching center and date range
@@ -77,7 +77,7 @@ public sealed class GetSystemAppointmentsQueryHandler(IApplicationDbContext dbCo
             .Where(a => a.Status != AppointmentStatus.Pending)
             .ToListAsync(cancellationToken);
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = dateTimeProvider.CurrentLocalDate;
         var allSlotsList = new List<SystemAppointmentSlotDto>();
 
         for (var date = startDate; date <= endDate; date = date.AddDays(1))

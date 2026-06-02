@@ -29,10 +29,10 @@ public record FilteredDonorDto(
 {
     public static FilteredDonorDto MapFrom(
         Donor donor,
-        MedicalScreening? latestScreening)
+        MedicalScreening? latestScreening,
+        DateOnly today)
     {
         // Age calculation
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var age = today.Year - donor.DateOfBirth.Year;
         if (donor.DateOfBirth > today.AddYears(-age)) age--;
 
