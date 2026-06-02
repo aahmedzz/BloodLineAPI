@@ -17,7 +17,7 @@ public sealed class GetAvailableTimeSlotsQueryHandler(IApplicationDbContext dbCo
             .FirstOrDefaultAsync(c => c.Id == request.DonationCenterId, cancellationToken)
             ?? throw new NotFoundException("DonationCenter", request.DonationCenterId);
 
-        if (!center.IsOperatingOn(request.Date))
+        if (request.Date.Date < DateTime.UtcNow.Date || !center.IsOperatingOn(request.Date))
         {
             return [];
         }
@@ -28,6 +28,11 @@ public sealed class GetAvailableTimeSlotsQueryHandler(IApplicationDbContext dbCo
             return [];
         }
 
+        var nowTime = DateTime.UtcNow.TimeOfDay;
+        var availableSlots = request.Date.Date == DateTime.UtcNow.Date
+            ? slots.Where(s => s.Start >= nowTime).ToList()
+            : slots.ToList();
+
         var bookedSlots = await dbContext.DonationAppointments
             .Where(a => a.DonationCenterId == request.DonationCenterId)
             .Where(a => a.ScheduledDate == request.Date.Date)
@@ -36,7 +41,7 @@ public sealed class GetAvailableTimeSlotsQueryHandler(IApplicationDbContext dbCo
             .Select(g => new { StartTime = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.StartTime, x => x.Count, cancellationToken);
 
-        return slots.Select(s =>
+        return availableSlots.Select(s =>
         {
             var booked = bookedSlots.GetValueOrDefault(s.Start, 0);
             var available = Math.Max(0, s.MaxPerSlot - booked);

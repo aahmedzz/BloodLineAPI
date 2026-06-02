@@ -25,6 +25,7 @@ public static class DependencyInjection
     public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddTransient<MediatR.INotificationHandler<Application.Features.Appointments.Events.SystemAppointmentCancelledEvent>, EventHandlers.SystemAppointmentCancelledEventHandler>();
 
         services.AddControllers(options =>
 

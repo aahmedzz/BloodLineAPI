@@ -26,6 +26,16 @@ public sealed class CreateAppointmentCommandHandler(
             .FirstOrDefaultAsync(c => c.Id == request.DonationCenterId, cancellationToken)
             ?? throw new NotFoundException(nameof(DonationCenter), request.DonationCenterId);
 
+        if (request.ScheduledDate.Date < DateTime.UtcNow.Date)
+        {
+            return Result<CreateAppointmentResultDto>.Failure("Cannot book an appointment in the past.");
+        }
+
+        if (request.ScheduledDate.Date == DateTime.UtcNow.Date && request.StartTime < DateTime.UtcNow.TimeOfDay)
+        {
+            return Result<CreateAppointmentResultDto>.Failure("Cannot book a time slot that has already passed.");
+        }
+
         if (!center.IsOperatingOn(request.ScheduledDate))
         {
             return Result<CreateAppointmentResultDto>.Failure("The center is not operating on the selected date.");

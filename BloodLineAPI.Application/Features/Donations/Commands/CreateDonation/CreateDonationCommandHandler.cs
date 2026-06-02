@@ -195,9 +195,21 @@ public sealed class CreateDonationCommandHandler(
             _ => DonationSource.WalkIn
         };
 
+        var center = await dbContext.DonationCenters
+            .Include(c => c.OpeningHours)
+            .Include(c => c.CenterExclusions)
+            .FirstOrDefaultAsync(c => c.Id == request.DonationCenterId, cancellationToken);
+
+        if (center == null)
+        {
+            return Result<Guid>.Failure("Donation center not found.");
+        }
+
+        var (slotStart, slotEnd) = center.FindSlotForTime(DateTime.UtcNow);
+
         if (existingPendingDonation != null)
         {
-            existingPendingDonation.UpdateSystemDonation(request.DonationCenterId, sourceEnum);
+            existingPendingDonation.UpdateSystemDonation(request.DonationCenterId, sourceEnum, slotStart, slotEnd);
             await dbContext.SaveChangesAsync(cancellationToken);
             return Result<Guid>.Success(existingPendingDonation.Id);
         }
@@ -212,7 +224,9 @@ public sealed class CreateDonationCommandHandler(
             donationType: donationTypeEnum,
             source: sourceEnum,
             isNewDonor: isNewDonor,
-            hasAppAccount: hasAppAccount
+            hasAppAccount: hasAppAccount,
+            slotStart: slotStart,
+            slotEnd: slotEnd
         );
 
         await dbContext.DonationAppointments.AddAsync(appointment, cancellationToken);

@@ -23,6 +23,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
         public DonationStatus DonationStatus { get; private set; } = DonationStatus.Pending;
         public bool SentToLab { get; private set; } = false;
         public Guid? MedicalScreeningId { get; private set; }
+        public TimeSpan? CheckInTime { get; private set; }
 
         public Donor Donor { get; set; } = null!;
         public DonationCenter DonationCenter { get; set; } = null!;
@@ -59,6 +60,11 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             if (scheduledDate.Date < DateTime.UtcNow.Date)
             {
                 throw new DomainException("Cannot book an appointment in the past.");
+            }
+
+            if (scheduledDate.Date == DateTime.UtcNow.Date && startTime < DateTime.UtcNow.TimeOfDay)
+            {
+                throw new DomainException("Cannot book a time slot that has already passed.");
             }
 
             if (existingBookingsInSlot >= maxDonorsPerSlot)
@@ -168,6 +174,11 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                 throw new DomainException("Cannot reschedule to a past date.");
             }
 
+            if (newDate.Date == DateTime.UtcNow.Date && newStartTime < DateTime.UtcNow.TimeOfDay)
+            {
+                throw new DomainException("Cannot reschedule to a time slot that has already passed.");
+            }
+
             if (existingBookingsInSlot >= maxDonorsPerSlot)
             {
                 throw new DomainException("This time slot is fully booked.");
@@ -226,6 +237,12 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                 throw new DomainException("Only pending or confirmed appointments can be marked as no-show.");
             }
 
+            var appointmentEnd = ScheduledDate.Date.Add(EndTime);
+            if (appointmentEnd > DateTime.UtcNow)
+            {
+                throw new DomainException("Cannot mark an appointment as no-show before its scheduled time has passed.");
+            }
+
             Status = AppointmentStatus.NoShow;
         }
 
@@ -235,7 +252,9 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             DonationType donationType,
             DonationSource source,
             bool isNewDonor,
-            bool hasAppAccount)
+            bool hasAppAccount,
+            TimeSpan slotStart,
+            TimeSpan slotEnd)
         {
             var now = DateTime.UtcNow;
             var appointment = new DonationAppointment
@@ -244,8 +263,9 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                 DonorId = donorId,
                 DonationCenterId = donationCenterId,
                 ScheduledDate = now.Date,
-                StartTime = now.TimeOfDay,
-                EndTime = now.TimeOfDay,
+                StartTime = slotStart,
+                EndTime = slotEnd,
+                CheckInTime = now.TimeOfDay,
                 DonationType = donationType,
                 Status = AppointmentStatus.Confirmed,
                 Source = source,
@@ -265,7 +285,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             return appointment;
         }
 
-        public void UpdateSystemDonation(Guid donationCenterId, DonationSource source)
+        public void UpdateSystemDonation(Guid donationCenterId, DonationSource source, TimeSpan slotStart, TimeSpan slotEnd)
         {
             if (DonationStatus != DonationStatus.Pending)
             {
@@ -274,10 +294,26 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
 
             var now = DateTime.UtcNow;
             DonationCenterId = donationCenterId;
-            Source = source;
-            ScheduledDate = now.Date;
-            StartTime = now.TimeOfDay;
-            EndTime = now.TimeOfDay;
+            
+            if (Source != DonationSource.MobileApp)
+            {
+                Source = source;
+                ScheduledDate = now.Date;
+                StartTime = slotStart;
+                EndTime = slotEnd;
+            }
+            else
+            {
+                // If it is a mobile app booking for today, keep original slot. Otherwise, move to today's active slot.
+                if (ScheduledDate.Date != now.Date)
+                {
+                    ScheduledDate = now.Date;
+                    StartTime = slotStart;
+                    EndTime = slotEnd;
+                }
+            }
+            
+            CheckInTime = now.TimeOfDay;
             Status = AppointmentStatus.Confirmed;
         }
 

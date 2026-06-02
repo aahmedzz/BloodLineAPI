@@ -52,6 +52,7 @@ public static class DependencyInjection
 
         services.AddScoped<AppointmentReminderJob>();
         services.AddScoped<ChatHistoryCleanupJob>();
+        services.AddScoped<AppointmentNoShowJob>();
 
         services.Configure<DonationCooldownSettings>(configuration.GetSection("DonationCooldown"));
         services.Configure<AppointmentSettings>(configuration.GetSection("Appointment"));

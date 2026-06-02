@@ -26,6 +26,16 @@ public sealed class RescheduleAppointmentCommandHandler(
             ?? throw new NotFoundException("DonationAppointment", request.AppointmentId);
 
         var center = appointment.DonationCenter;
+        if (request.NewScheduledDate.Date < DateTime.UtcNow.Date)
+        {
+            return Result<CreateAppointmentResultDto>.Failure("Cannot reschedule to a past date.");
+        }
+
+        if (request.NewScheduledDate.Date == DateTime.UtcNow.Date && request.NewStartTime < DateTime.UtcNow.TimeOfDay)
+        {
+            return Result<CreateAppointmentResultDto>.Failure("Cannot reschedule to a time slot that has already passed.");
+        }
+
         if (!center.IsOperatingOn(request.NewScheduledDate))
         {
             return Result<CreateAppointmentResultDto>.Failure("The center is not operating on the selected date.");
