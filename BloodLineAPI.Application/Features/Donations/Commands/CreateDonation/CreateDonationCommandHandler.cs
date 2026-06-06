@@ -207,7 +207,24 @@ public sealed class CreateDonationCommandHandler(
         }
 
         var localNow = dateTimeProvider.LocalNow;
-        var (slotStart, slotEnd) = center.FindSlotForTime(localNow);
+
+        if (!center.IsOperatingOn(localNow))
+        {
+            return Result<Guid>.Failure("Donation center is closed today.");
+        }
+
+        var slots = center.GenerateTimeSlotsForDate(localNow, center.CenterExclusions.ToList(), center.OpeningHours.ToList());
+        var time = localNow.TimeOfDay;
+        var matchingSlot = slots.Cast<(TimeSpan Start, TimeSpan End, int MaxPerSlot)?>()
+            .FirstOrDefault(s => s.HasValue && time >= s.Value.Start && time < s.Value.End);
+
+        if (matchingSlot == null)
+        {
+            return Result<Guid>.Failure("The center is currently closed or has no available slots at this time.");
+        }
+
+        var slotStart = matchingSlot.Value.Start;
+        var slotEnd = matchingSlot.Value.End;
 
         if (existingPendingDonation != null)
         {

@@ -75,6 +75,7 @@ public sealed class GetSystemAppointmentsQueryHandler(IApplicationDbContext dbCo
             .Where(a => a.DonationCenterId == centerId)
             .Where(a => a.ScheduledDate >= startDate && a.ScheduledDate <= endDate)
             .Where(a => a.Status != AppointmentStatus.Pending)
+            .Where(a => a.Source == DonationSource.MobileApp)
             .ToListAsync(cancellationToken);
 
         var today = dateTimeProvider.CurrentLocalDate;

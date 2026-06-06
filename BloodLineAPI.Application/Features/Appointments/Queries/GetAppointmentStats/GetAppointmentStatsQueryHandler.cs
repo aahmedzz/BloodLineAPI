@@ -67,6 +67,7 @@ public sealed class GetAppointmentStatsQueryHandler(IApplicationDbContext dbCont
             .Where(a => a.DonationCenterId == centerId)
             .Where(a => a.ScheduledDate >= startDate && a.ScheduledDate <= endDate)
             .Where(a => a.Status != AppointmentStatus.Pending)
+            .Where(a => a.Source == DonationSource.MobileApp)
             .ToListAsync(cancellationToken);
 
         // Dynamic slot capacity calculation

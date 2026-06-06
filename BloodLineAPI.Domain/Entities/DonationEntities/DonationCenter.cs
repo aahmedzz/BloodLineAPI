@@ -92,38 +92,6 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             return date.Date >= StartDate.Date && (EndDate == null || date.Date <= EndDate.Value.Date);
         }
 
-        public (TimeSpan Start, TimeSpan End) FindSlotForTime(DateTime dateTime)
-        {
-            var slots = GenerateTimeSlotsForDate(dateTime);
-            var time = dateTime.TimeOfDay;
-
-            if (slots.Count == 0)
-            {
-                // Fallback: round to nearest SlotDurationMinutes
-                var duration = SlotDurationMinutes ?? 15;
-                var minutes = time.Minutes;
-                var roundedMinutes = (minutes / duration) * duration;
-                var start = new TimeSpan(time.Hours, roundedMinutes, 0);
-                var end = start.Add(TimeSpan.FromMinutes(duration));
-                return (start, end);
-            }
-
-            var matchingSlot = slots.FirstOrDefault(s => time >= s.Start && time < s.End);
-            if (matchingSlot != default)
-            {
-                return (matchingSlot.Start, matchingSlot.End);
-            }
-
-            // Fallback: if before opening hours, return first slot
-            if (time < slots.First().Start)
-            {
-                return (slots.First().Start, slots.First().End);
-            }
-
-            // Fallback: if after closing hours, return last slot
-            return (slots.Last().Start, slots.Last().End);
-        }
-
         public IReadOnlyList<string> GetSupportedDonationTypes()
         {
             return SupportedDonationTypes
