@@ -206,6 +206,11 @@ public sealed class CreateDonationCommandHandler(
             return Result<Guid>.Failure("Donation center not found.");
         }
 
+        if (center.CenterType == CenterType.Campaign && center.Status != CenterStatus.Active)
+        {
+            return Result<Guid>.Failure("حملة التبرع هذه ليست نشطة حالياً.");
+        }
+
         var localNow = dateTimeProvider.LocalNow;
 
         if (!center.IsOperatingOn(localNow))

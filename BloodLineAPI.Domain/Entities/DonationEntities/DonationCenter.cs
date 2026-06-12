@@ -18,6 +18,28 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
         public int MaxDonorsPerSlot { get; set; }
         public int? SlotDurationMinutes { get; set; }
 
+        // Campaign-specific properties
+        public int CampaignNumber { get; set; }
+        public string? CampaignCode { get; set; }
+        public int? TargetDonors { get; set; }
+        public Guid? CreatedById { get; set; }
+        public string? CreatedByName { get; set; }
+        public bool RecurrenceEnabled { get; set; }
+        public RecurrenceType? RecurrenceType { get; set; }
+        public string? RecurrenceWeekDays { get; set; }
+        public DateTime? RecurrenceEndDate { get; set; }
+        public Guid? RecurrenceGroupId { get; set; }
+        public string? ScheduledJobIds { get; set; }
+
+        public void CompleteCampaignEarly()
+        {
+            if (CenterType != CenterType.Campaign)
+                throw new DomainException("Only campaigns can be completed early.");
+            if (Status == CenterStatus.Completed)
+                throw new DomainException("Campaign is already completed.");
+            Status = CenterStatus.Completed;
+        }
+
         public ICollection<DonationAppointment> DonationAppointments { get; set; } = new List<DonationAppointment>();
         public ICollection<OpeningHours> OpeningHours { get; set; } = new List<OpeningHours>();
         public ICollection<CenterExclusion> CenterExclusions { get; set; } = new List<CenterExclusion>();
@@ -89,7 +111,39 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
 
         public bool IsOperatingOn(DateTime date)
         {
-            return date.Date >= StartDate.Date && (EndDate == null || date.Date <= EndDate.Value.Date);
+            if (CenterType != CenterType.Campaign)
+            {
+                return date.Date >= StartDate.Date && (EndDate == null || date.Date <= EndDate.Value.Date);
+            }
+
+            if (date.Date < StartDate.Date) return false;
+            if (EndDate.HasValue && date.Date > EndDate.Value.Date) return false;
+            if (RecurrenceEndDate.HasValue && date.Date > RecurrenceEndDate.Value.Date) return false;
+
+            if (!RecurrenceEnabled || RecurrenceType == BloodLineAPI.Domain.Enums.RecurrenceType.None)
+            {
+                return date.Date == StartDate.Date;
+            }
+
+            switch (RecurrenceType)
+            {
+                case BloodLineAPI.Domain.Enums.RecurrenceType.Daily:
+                    return true;
+
+                case BloodLineAPI.Domain.Enums.RecurrenceType.Weekly:
+                    return date.DayOfWeek == StartDate.DayOfWeek;
+
+                case BloodLineAPI.Domain.Enums.RecurrenceType.Monthly:
+                    return date.Day == StartDate.Day;
+
+                case BloodLineAPI.Domain.Enums.RecurrenceType.Custom:
+                    if (string.IsNullOrEmpty(RecurrenceWeekDays)) return false;
+                    var allowedDays = RecurrenceWeekDays.Split(',').Select(int.Parse).ToList();
+                    return allowedDays.Contains((int)date.DayOfWeek);
+
+                default:
+                    return false;
+            }
         }
 
         public IReadOnlyList<string> GetSupportedDonationTypes()
