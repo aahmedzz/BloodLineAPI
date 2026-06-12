@@ -70,6 +70,17 @@ public sealed class CreateAppointmentCommandHandler(
         var donor = await dbContext.Donors.FirstOrDefaultAsync(d => d.Id == request.DonorId, cancellationToken)
             ?? throw new NotFoundException(nameof(Donor), request.DonorId);
 
+        // Check if the donor already has an upcoming/active booking (Pending or Confirmed)
+        var hasUpcomingBooking = await dbContext.DonationAppointments
+            .AnyAsync(a => a.DonorId == request.DonorId &&
+                           (a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed),
+                       cancellationToken);
+
+        if (hasUpcomingBooking)
+        {
+            return Result<CreateAppointmentResultDto>.Failure("You already have an active or upcoming appointment booked.");
+        }
+
         // Centralised eligibility check (lockout, cooldown, status)
         var eligibility = await eligibilityService.CheckEligibilityAsync(
             donor.Id, request.DonationType, cancellationToken);
