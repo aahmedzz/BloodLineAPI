@@ -253,7 +253,8 @@ public sealed class CreateCampaignCommandHandler(
         ) : null;
 
         var resultDto = new CampaignDto(
-            Id: campaign.CampaignCode ?? $"CAM-{campaign.CampaignNumber:D3}",
+            Id: campaign.Id.ToString(),
+            CampaignCode: campaign.CampaignCode ?? $"CAM-{campaign.CampaignNumber:D3}",
             Title: campaign.Name,
             City: campaign.Location,
             Latitude: campaign.Latitude,

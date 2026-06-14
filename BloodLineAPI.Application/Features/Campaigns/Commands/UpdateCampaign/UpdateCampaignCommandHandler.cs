@@ -22,9 +22,14 @@ public sealed class UpdateCampaignCommandHandler(
 {
     public async Task<Result<CampaignDto>> Handle(UpdateCampaignCommand request, CancellationToken cancellationToken)
     {
-        var campaign = await dbContext.DonationCenters
-            .FirstOrDefaultAsync(c => c.CampaignCode == request.Id && c.CenterType == CenterType.Campaign, cancellationToken)
-            ?? throw new NotFoundException(nameof(DonationCenter), request.Id);
+        var campaign = Guid.TryParse(request.Id, out var parsedGuid)
+            ? await dbContext.DonationCenters.FirstOrDefaultAsync(c => c.Id == parsedGuid && c.CenterType == CenterType.Campaign, cancellationToken)
+            : await dbContext.DonationCenters.FirstOrDefaultAsync(c => c.CampaignCode == request.Id && c.CenterType == CenterType.Campaign, cancellationToken);
+
+        if (campaign == null)
+        {
+            throw new NotFoundException(nameof(DonationCenter), request.Id);
+        }
 
         if (campaign.Status == CenterStatus.Completed)
         {
@@ -284,7 +289,8 @@ public sealed class UpdateCampaignCommandHandler(
         ) : null;
 
         var resultDto = new CampaignDto(
-            Id: campaign.CampaignCode ?? $"CAM-{campaign.CampaignNumber:D3}",
+            Id: campaign.Id.ToString(),
+            CampaignCode: campaign.CampaignCode ?? $"CAM-{campaign.CampaignNumber:D3}",
             Title: campaign.Name,
             City: campaign.Location,
             Latitude: campaign.Latitude,

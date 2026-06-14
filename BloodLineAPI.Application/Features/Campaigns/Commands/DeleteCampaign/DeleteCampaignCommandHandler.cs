@@ -26,9 +26,14 @@ public sealed class DeleteCampaignCommandHandler(
 {
     public async Task<Result<Unit>> Handle(DeleteCampaignCommand request, CancellationToken cancellationToken)
     {
-        var campaign = await dbContext.DonationCenters
-            .FirstOrDefaultAsync(c => c.CampaignCode == request.Id && c.CenterType == CenterType.Campaign, cancellationToken)
-            ?? throw new NotFoundException(nameof(DonationCenter), request.Id);
+        var campaign = Guid.TryParse(request.Id, out var parsedGuid)
+            ? await dbContext.DonationCenters.FirstOrDefaultAsync(c => c.Id == parsedGuid && c.CenterType == CenterType.Campaign, cancellationToken)
+            : await dbContext.DonationCenters.FirstOrDefaultAsync(c => c.CampaignCode == request.Id && c.CenterType == CenterType.Campaign, cancellationToken);
+
+        if (campaign == null)
+        {
+            throw new NotFoundException(nameof(DonationCenter), request.Id);
+        }
 
         if (campaign.Status == CenterStatus.Completed)
         {

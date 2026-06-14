@@ -3,7 +3,8 @@ using System;
 namespace BloodLineAPI.Application.Features.Campaigns.Dtos;
 
 public record CampaignDto(
-    string Id,                  // CAM-XXX (derived from CampaignCode)
+    string Id,                  // Database Guid Id as string
+    string CampaignCode,        // CAM-XXX (derived from CampaignCode)
     string Title,               // DonationCenter Name
     string City,                // DonationCenter Location
     double? Latitude,

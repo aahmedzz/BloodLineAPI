@@ -21,10 +21,14 @@ public sealed class GetCampaignAppointmentsQueryHandler(
 {
     public async Task<Result<IReadOnlyList<CampaignAppointmentSlotDto>>> Handle(GetCampaignAppointmentsQuery request, CancellationToken cancellationToken)
     {
-        var campaign = await dbContext.DonationCenters
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.CampaignCode == request.Id && c.CenterType == CenterType.Campaign, cancellationToken)
-            ?? throw new NotFoundException(nameof(DonationCenter), request.Id);
+        var campaign = Guid.TryParse(request.Id, out var parsedGuid)
+            ? await dbContext.DonationCenters.AsNoTracking().FirstOrDefaultAsync(c => c.Id == parsedGuid && c.CenterType == CenterType.Campaign, cancellationToken)
+            : await dbContext.DonationCenters.AsNoTracking().FirstOrDefaultAsync(c => c.CampaignCode == request.Id && c.CenterType == CenterType.Campaign, cancellationToken);
+
+        if (campaign == null)
+        {
+            throw new NotFoundException(nameof(DonationCenter), request.Id);
+        }
 
         var appointments = await dbContext.DonationAppointments
             .AsNoTracking()

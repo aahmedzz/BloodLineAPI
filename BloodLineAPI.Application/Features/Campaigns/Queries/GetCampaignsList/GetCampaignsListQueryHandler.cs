@@ -89,7 +89,8 @@ public sealed class GetCampaignsListQueryHandler(IApplicationDbContext dbContext
             ) : null;
 
             var dto = new CampaignDto(
-                Id: c.CampaignCode ?? $"CAM-{c.CampaignNumber:D3}",
+                Id: c.Id.ToString(),
+                CampaignCode: c.CampaignCode ?? $"CAM-{c.CampaignNumber:D3}",
                 Title: c.Name,
                 City: c.Location,
                 Latitude: c.Latitude,
