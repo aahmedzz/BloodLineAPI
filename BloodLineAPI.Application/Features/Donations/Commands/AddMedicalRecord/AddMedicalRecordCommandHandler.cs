@@ -129,6 +129,8 @@ public sealed class AddMedicalRecordCommandHandler(
             _ => DonorStatus.Eligible
         };
 
+        donor.LockoutUntil = lockoutUntil;
+
         if (donor.Status != newDonorStatus)
         {
             donor.Status = newDonorStatus;

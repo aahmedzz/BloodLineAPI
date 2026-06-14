@@ -109,7 +109,7 @@ public sealed class GetDoctorDashboardQueryHandler(
         var myEligibleDonorsCount = await dbContext.Donors
             .Where(d => myDonorIdsQuery.Contains(d.Id))
             .CountAsync(d => d.Status != DonorStatus.Ineligible && 
-                             !dbContext.MedicalScreenings.Any(ms => ms.DonorId == d.Id && !ms.IsEligible && ms.LockoutUntil != null && ms.LockoutUntil > utcNow), 
+                             (!d.LockoutUntil.HasValue || d.LockoutUntil <= utcNow), 
                         cancellationToken);
 
         return new DashboardStatisticsDto(

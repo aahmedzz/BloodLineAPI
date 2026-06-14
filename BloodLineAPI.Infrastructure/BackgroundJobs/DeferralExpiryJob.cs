@@ -22,7 +22,6 @@ public class DeferralExpiryJob(
 
         var donor = await dbContext.Donors
             .Include(d => d.User)
-            .Include(d => d.MedicalScreenings)
             .FirstOrDefaultAsync(d => d.Id == donorId, ct);
 
         if (donor == null)
@@ -38,16 +37,12 @@ public class DeferralExpiryJob(
             return;
         }
 
-        var latestLockout = donor.MedicalScreenings
-            .Where(ms => !ms.IsEligible && ms.LockoutUntil != null)
-            .OrderByDescending(ms => ms.LockoutUntil)
-            .FirstOrDefault();
-
         // If the lockout date has passed (or no lockout is active anymore)
-        if (latestLockout == null || latestLockout.LockoutUntil <= todayLocal)
+        if (!donor.LockoutUntil.HasValue || donor.LockoutUntil.Value <= todayLocal)
         {
             var oldStatus = donor.Status;
             donor.Status = DonorStatus.Eligible;
+            donor.LockoutUntil = null;
 
             var notification = new Notification
             {

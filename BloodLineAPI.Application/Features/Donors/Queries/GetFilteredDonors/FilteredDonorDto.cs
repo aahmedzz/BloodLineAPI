@@ -41,7 +41,7 @@ public record FilteredDonorDto(
             .Where(s => !string.IsNullOrWhiteSpace(s));
         var fullAddress = addressParts.Any() ? string.Join(", ", addressParts) : (donor.Address ?? string.Empty);
 
-        var deferredUntilStr = latestScreening?.LockoutUntil?.ToString("yyyy-MM-dd");
+        var deferredUntilStr = donor.LockoutUntil?.ToString("yyyy-MM-dd");
         var rejectionReason = latestScreening?.RejectionReason;
 
         var bloodTypeDisplay = donor.BloodType?.FullDisplayname ?? string.Empty;

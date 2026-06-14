@@ -45,21 +45,15 @@ public sealed class DonorEligibilityService(
                     RejectionReason: "Donor is permanently ineligible."));
         }
 
-        // 2. Lockout / Deferral check — query only the latest failed screening with active lockout
-        var activeLockout = await dbContext.MedicalScreenings
-            .Where(ms => ms.DonorId == donorId && !ms.IsEligible)
-            .Where(ms => ms.LockoutUntil != null && ms.LockoutUntil > dateTimeProvider.UtcNow)
-            .OrderByDescending(ms => ms.LockoutUntil)
-            .Select(ms => new { ms.LockoutUntil, ms.RejectionReason })
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (activeLockout != null)
+        // 2. Lockout / Deferral check
+        if (donor.Status == DonorStatus.Deferred && donor.LockoutUntil.HasValue && donor.LockoutUntil.Value > dateTimeProvider.UtcNow)
         {
+            var localLockout = dateTimeProvider.ToLocalTime(donor.LockoutUntil.Value);
             return Result<DonorEligibilityResult>.Success(
                 new DonorEligibilityResult(
                     IsEligible: false,
-                    DeferredUntil: activeLockout.LockoutUntil,
-                    RejectionReason: $"Donor is deferred until {activeLockout.LockoutUntil:yyyy-MM-dd}: {activeLockout.RejectionReason}"));
+                    DeferredUntil: donor.LockoutUntil,
+                    RejectionReason: $"Donor is deferred until {localLockout:yyyy-MM-dd}"));
         }
 
         // 3. Cooldown period check

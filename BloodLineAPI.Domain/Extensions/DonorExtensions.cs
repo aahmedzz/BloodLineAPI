@@ -32,6 +32,6 @@ public static class DonorExtensions
                      (d.Gender == Gender.Male 
                          ? d.LastDonationDate.Value.AddDays(cooldownSettings.WholeBloodMaleDays) <= todayDate 
                          : d.LastDonationDate.Value.AddDays(cooldownSettings.WholeBloodFemaleDays) <= todayDate)) &&
-                    !d.MedicalScreenings.Any(ms => !ms.IsEligible && ms.LockoutUntil != null && ms.LockoutUntil > utcNow);
+                    (!d.LockoutUntil.HasValue || d.LockoutUntil <= utcNow);
     }
 }
