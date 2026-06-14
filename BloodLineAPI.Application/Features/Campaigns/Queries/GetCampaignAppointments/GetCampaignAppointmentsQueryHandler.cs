@@ -32,7 +32,7 @@ public sealed class GetCampaignAppointmentsQueryHandler(
                 .ThenInclude(d => d.BloodType)
             .Include(a => a.Donor)
                 .ThenInclude(d => d.User)
-            .Where(a => a.DonationCenterId == campaign.Id)
+            .Where(a => a.DonationCenterId == campaign.Id && a.Status != AppointmentStatus.Pending)
             .OrderBy(a => a.ScheduledDate)
                 .ThenBy(a => a.StartTime)
             .ToListAsync(cancellationToken);

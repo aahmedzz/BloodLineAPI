@@ -68,8 +68,8 @@ public sealed class GetCampaignsListQueryHandler(IApplicationDbContext dbContext
         var projectedQuery = query.Select(c => new
         {
             Campaign = c,
-            RegisteredCount = dbContext.DonationAppointments.Count(a => a.DonationCenterId == c.Id && a.Status != AppointmentStatus.Cancelled),
-            AppBookingsCount = dbContext.DonationAppointments.Count(a => a.DonationCenterId == c.Id && a.Source == DonationSource.MobileApp)
+            RegisteredCount = dbContext.DonationAppointments.Count(a => a.DonationCenterId == c.Id && a.Status != AppointmentStatus.Cancelled && a.Status != AppointmentStatus.Pending && a.Status != AppointmentStatus.NoShow),
+            AppBookingsCount = dbContext.DonationAppointments.Count(a => a.DonationCenterId == c.Id && a.Source == DonationSource.MobileApp && a.Status != AppointmentStatus.Pending)
         });
 
         var pageResults = await projectedQuery

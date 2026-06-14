@@ -10,13 +10,17 @@ using BloodLineAPI.Domain.Entities.DonationEntities;
 using BloodLineAPI.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using BloodLineAPI.Domain.Common;
+using BloodLineAPI.Domain.Extensions;
 
 namespace BloodLineAPI.Application.Features.Doctor.Queries.GetDoctorDashboard;
 
 public sealed class GetDoctorDashboardQueryHandler(
     IApplicationDbContext dbContext,
     ICurrentUserService currentUserService,
-    IDateTimeProvider dateTimeProvider)
+    IDateTimeProvider dateTimeProvider,
+    IOptions<DonationCooldownSettings> cooldownOptions)
     : IRequestHandler<GetDoctorDashboardQuery, Result<DoctorDashboardDto>>
 {
     public async Task<Result<DoctorDashboardDto>> Handle(GetDoctorDashboardQuery request, CancellationToken cancellationToken)
@@ -28,39 +32,27 @@ public sealed class GetDoctorDashboardQueryHandler(
             return Result<DoctorDashboardDto>.Failure("User is not authenticated.");
         }
 
-        // 2. Resolve the doctor's primary branch center
-        var center = await GetDoctorPrimaryCenterAsync(doctorUserId, cancellationToken);
-
-        // 3. Resolve dates
+        // 2. Resolve dates
         var utcNow = dateTimeProvider.UtcNow;
         var localNow = dateTimeProvider.LocalNow;
         var todayDate = localNow.Date;
 
-        // 4. Gather statistics, sources, weekly chart, and listings in parallel tasks for optimal performance
-        var statisticsTask = GetStatisticsAsync(center, todayDate, utcNow, cancellationToken);
-        var sourcesTask = GetSourcesAsync(center, todayDate, cancellationToken);
-        var weeklyChartTask = GetWeeklyChartAsync(center, todayDate, localNow, cancellationToken);
-        var activeCampaignsTask = GetActiveCampaignsAsync(center, cancellationToken);
-        var upcomingAppointmentsTask = GetUpcomingAppointmentsAsync(center, todayDate, cancellationToken);
-        var recentDonationsTask = GetRecentDonationsAsync(center, cancellationToken);
+        // 3. Gather statistics, sources, weekly chart, and listings sequentially (DbContext is not thread-safe)
+        var statistics = await GetStatisticsAsync(doctorUserId, todayDate, utcNow, cooldownOptions.Value, cancellationToken);
+        var sources = await GetSourcesAsync(todayDate, cancellationToken);
+        var weeklyChart = await GetWeeklyChartAsync(todayDate, localNow, cancellationToken);
+        var activeCampaigns = await GetActiveCampaignsAsync(cancellationToken);
+        var upcomingAppointments = await GetUpcomingAppointmentsAsync(todayDate, cancellationToken);
+        var recentDonations = await GetRecentDonationsAsync(cancellationToken);
 
-        await Task.WhenAll(
-            statisticsTask,
-            sourcesTask,
-            weeklyChartTask,
-            activeCampaignsTask,
-            upcomingAppointmentsTask,
-            recentDonationsTask
-        );
-
-        // 5. Construct and return response
+        // 4. Construct and return response
         var dashboardDto = new DoctorDashboardDto(
-            Statistics: await statisticsTask,
-            Sources: await sourcesTask,
-            WeeklyChart: await weeklyChartTask,
-            ActiveCampaigns: await activeCampaignsTask,
-            UpcomingAppointments: await upcomingAppointmentsTask,
-            RecentDonations: await recentDonationsTask
+            Statistics: statistics,
+            Sources: sources,
+            WeeklyChart: weeklyChart,
+            ActiveCampaigns: activeCampaigns,
+            UpcomingAppointments: upcomingAppointments,
+            RecentDonations: recentDonations
         );
 
         return Result<DoctorDashboardDto>.Success(dashboardDto);
@@ -68,87 +60,54 @@ public sealed class GetDoctorDashboardQueryHandler(
 
     #region Helper Methods
 
-    private async Task<DonationCenter?> GetDoctorPrimaryCenterAsync(Guid doctorUserId, CancellationToken cancellationToken)
-    {
-        var staff = await dbContext.Staff
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == doctorUserId, cancellationToken);
-
-        DonationCenter? center = null;
-        if (staff != null && !string.IsNullOrEmpty(staff.City))
-        {
-            var cityLower = staff.City.Trim().ToLower();
-            center = await dbContext.DonationCenters
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.CenterType == CenterType.MainBranch && c.Location.ToLower() == cityLower, cancellationToken);
-        }
-
-        return center ?? await dbContext.DonationCenters
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.CenterType == CenterType.MainBranch, cancellationToken);
-    }
-
     private async Task<DashboardStatisticsDto> GetStatisticsAsync(
-        DonationCenter? center,
+        Guid doctorUserId,
         DateTime todayDate,
         DateTime utcNow,
+        DonationCooldownSettings cooldownSettings,
         CancellationToken cancellationToken)
     {
         var todayDonationsCount = await dbContext.DonationAppointments
             .CountAsync(da => (da.DonationStatus == DonationStatus.Completed || da.DonationStatus == DonationStatus.Approved) && 
-                              da.ScheduledDate == todayDate &&
-                              (center == null || da.DonationCenterId == center.Id || (da.DonationCenter.CenterType == CenterType.Campaign && da.DonationCenter.Location == center.Location)), 
+                              da.ScheduledDate == todayDate, 
                         cancellationToken);
 
         var totalDonationsCount = await dbContext.DonationAppointments
-            .CountAsync(da => (da.DonationStatus == DonationStatus.Completed || da.DonationStatus == DonationStatus.Approved) &&
-                              (center == null || da.DonationCenterId == center.Id || (da.DonationCenter.CenterType == CenterType.Campaign && da.DonationCenter.Location == center.Location)), 
+            .CountAsync(da => da.DonationStatus == DonationStatus.Completed || da.DonationStatus == DonationStatus.Approved, 
                         cancellationToken);
 
-        // Fetch unique donors associated with the main branch or its campaigns
-        var branchCenterIdsQuery = dbContext.DonationCenters
-            .Where(c => center == null || c.Id == center.Id || (c.CenterType == CenterType.Campaign && c.Location == center.Location))
-            .Select(c => c.Id);
-
-        var branchDonorIdsQuery = dbContext.DonationAppointments
-            .Where(da => branchCenterIdsQuery.Contains(da.DonationCenterId))
-            .Select(da => da.DonorId)
-            .Distinct();
-
+        // Fetch total and eligible donors in the system (overall)
         var totalDonorsCount = await dbContext.Donors
-            .Where(d => branchDonorIdsQuery.Contains(d.Id))
             .CountAsync(cancellationToken);
 
         var eligibleDonorsCount = await dbContext.Donors
-            .Where(d => branchDonorIdsQuery.Contains(d.Id))
-            .CountAsync(d => d.Status != DonorStatus.Ineligible && 
-                             !dbContext.MedicalScreenings.Any(ms => ms.DonorId == d.Id && !ms.IsEligible && ms.LockoutUntil != null && ms.LockoutUntil > utcNow), 
-                        cancellationToken);
+            .CountAsync(DonorExtensions.IsEligiblePredicate(todayDate, utcNow, cooldownSettings), cancellationToken);
 
         var myActiveCampaignsCount = await dbContext.DonationCenters
             .CountAsync(c => c.CenterType == CenterType.Campaign && 
                              c.Status == CenterStatus.Active && 
-                             (center == null || c.Location == center.Location), 
+                             c.CreatedById == doctorUserId, 
                         cancellationToken);
 
         var myTotalCampaignsCount = await dbContext.DonationCenters
             .CountAsync(c => c.CenterType == CenterType.Campaign && 
-                             (center == null || c.Location == center.Location), 
+                             c.CreatedById == doctorUserId, 
                         cancellationToken);
 
-        // Define "My Donors" as donors who booked/donated in campaigns linked to this branch/location
-        var myCampaignDonorIdsQuery = dbContext.DonationAppointments
-            .Where(da => da.DonationCenter.CenterType == CenterType.Campaign && 
-                         (center == null || da.DonationCenter.Location == center.Location))
-            .Select(da => da.DonorId)
+        // Define "My Donors" as donors who had completed or approved donations screened by this doctor
+        var myDonorIdsQuery = dbContext.MedicalScreenings
+            .Where(ms => ms.PerformedByStaffId == doctorUserId &&
+                         ms.DonationAppointmentId != null &&
+                         (ms.DonationAppointment!.DonationStatus == DonationStatus.Completed || ms.DonationAppointment!.DonationStatus == DonationStatus.Approved))
+            .Select(ms => ms.DonorId)
             .Distinct();
 
         var myDonorsCount = await dbContext.Donors
-            .Where(d => myCampaignDonorIdsQuery.Contains(d.Id))
+            .Where(d => myDonorIdsQuery.Contains(d.Id))
             .CountAsync(cancellationToken);
 
         var myEligibleDonorsCount = await dbContext.Donors
-            .Where(d => myCampaignDonorIdsQuery.Contains(d.Id))
+            .Where(d => myDonorIdsQuery.Contains(d.Id))
             .CountAsync(d => d.Status != DonorStatus.Ineligible && 
                              !dbContext.MedicalScreenings.Any(ms => ms.DonorId == d.Id && !ms.IsEligible && ms.LockoutUntil != null && ms.LockoutUntil > utcNow), 
                         cancellationToken);
@@ -166,47 +125,42 @@ public sealed class GetDoctorDashboardQueryHandler(
     }
 
     private async Task<DonationSourceStatsDto> GetSourcesAsync(
-        DonationCenter? center,
         DateTime todayDate,
         CancellationToken cancellationToken)
     {
         var walkinTotal = await dbContext.DonationAppointments
             .CountAsync(da => (da.DonationStatus == DonationStatus.Completed || da.DonationStatus == DonationStatus.Approved) &&
-                              da.Source == DonationSource.WalkIn &&
-                              (center == null || da.DonationCenterId == center.Id), 
+                              da.DonationCenter.CenterType != CenterType.Campaign &&
+                              da.Source != DonationSource.Campaign, 
                         cancellationToken);
-
+ 
         var walkinToday = await dbContext.DonationAppointments
             .CountAsync(da => (da.DonationStatus == DonationStatus.Completed || da.DonationStatus == DonationStatus.Approved) &&
-                              da.Source == DonationSource.WalkIn &&
-                              da.ScheduledDate == todayDate &&
-                              (center == null || da.DonationCenterId == center.Id), 
+                              da.DonationCenter.CenterType != CenterType.Campaign &&
+                              da.Source != DonationSource.Campaign &&
+                              da.ScheduledDate == todayDate, 
                         cancellationToken);
-
+ 
         var campaignTotal = await dbContext.DonationAppointments
             .CountAsync(da => (da.DonationStatus == DonationStatus.Completed || da.DonationStatus == DonationStatus.Approved) &&
-                              (da.Source == DonationSource.Campaign || da.DonationCenter.CenterType == CenterType.Campaign) &&
-                              (center == null || da.DonationCenter.Location == center.Location), 
+                              (da.DonationCenter.CenterType == CenterType.Campaign || da.Source == DonationSource.Campaign), 
                         cancellationToken);
-
+ 
         var campaignToday = await dbContext.DonationAppointments
             .CountAsync(da => (da.DonationStatus == DonationStatus.Completed || da.DonationStatus == DonationStatus.Approved) &&
-                              (da.Source == DonationSource.Campaign || da.DonationCenter.CenterType == CenterType.Campaign) &&
-                              da.ScheduledDate == todayDate &&
-                              (center == null || da.DonationCenter.Location == center.Location), 
+                              (da.DonationCenter.CenterType == CenterType.Campaign || da.Source == DonationSource.Campaign) &&
+                              da.ScheduledDate == todayDate, 
                         cancellationToken);
 
         var appTotal = await dbContext.DonationAppointments
             .CountAsync(da => (da.DonationStatus == DonationStatus.Completed || da.DonationStatus == DonationStatus.Approved) &&
-                              da.Source == DonationSource.MobileApp &&
-                              (center == null || da.DonationCenterId == center.Id), 
+                              da.Source == DonationSource.MobileApp, 
                         cancellationToken);
 
         var appToday = await dbContext.DonationAppointments
             .CountAsync(da => (da.DonationStatus == DonationStatus.Completed || da.DonationStatus == DonationStatus.Approved) &&
                               da.Source == DonationSource.MobileApp &&
-                              da.ScheduledDate == todayDate &&
-                              (center == null || da.DonationCenterId == center.Id), 
+                              da.ScheduledDate == todayDate, 
                         cancellationToken);
 
         return new DonationSourceStatsDto(
@@ -220,7 +174,6 @@ public sealed class GetDoctorDashboardQueryHandler(
     }
 
     private async Task<IReadOnlyList<WeeklyDonationChartDto>> GetWeeklyChartAsync(
-        DonationCenter? center,
         DateTime todayDate,
         DateTime localNow,
         CancellationToken cancellationToken)
@@ -231,8 +184,7 @@ public sealed class GetDoctorDashboardQueryHandler(
 
         var donationsByDay = await dbContext.DonationAppointments
             .Where(da => (da.DonationStatus == DonationStatus.Completed || da.DonationStatus == DonationStatus.Approved) &&
-                         da.ScheduledDate >= startOfWeek && da.ScheduledDate <= endOfWeek &&
-                         (center == null || da.DonationCenterId == center.Id || (da.DonationCenter.CenterType == CenterType.Campaign && da.DonationCenter.Location == center.Location)))
+                         da.ScheduledDate >= startOfWeek && da.ScheduledDate <= endOfWeek)
             .GroupBy(da => da.ScheduledDate)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);
@@ -264,20 +216,18 @@ public sealed class GetDoctorDashboardQueryHandler(
     }
 
     private async Task<IReadOnlyList<ActiveCampaignDto>> GetActiveCampaignsAsync(
-        DonationCenter? center,
         CancellationToken cancellationToken)
     {
         return await dbContext.DonationCenters
             .AsNoTracking()
             .Where(c => c.CenterType == CenterType.Campaign && 
-                        c.Status == CenterStatus.Active &&
-                        (center == null || c.Location == center.Location))
+                        c.Status == CenterStatus.Active)
             .OrderByDescending(c => c.StartDate)
             .Select(c => new ActiveCampaignDto(
                 c.Id,
                 c.Name,
                 c.Status.ToString().ToLowerInvariant(),
-                dbContext.DonationAppointments.Count(a => a.DonationCenterId == c.Id && a.Status != AppointmentStatus.Cancelled),
+                dbContext.DonationAppointments.Count(a => a.DonationCenterId == c.Id && a.Status != AppointmentStatus.Cancelled && a.Status != AppointmentStatus.Pending && a.Status != AppointmentStatus.NoShow),
                 c.TargetDonors ?? 0
             ))
             .Take(4)
@@ -285,7 +235,6 @@ public sealed class GetDoctorDashboardQueryHandler(
     }
 
     private async Task<IReadOnlyList<UpcomingAppointmentDto>> GetUpcomingAppointmentsAsync(
-        DonationCenter? center,
         DateTime todayDate,
         CancellationToken cancellationToken)
     {
@@ -296,7 +245,6 @@ public sealed class GetDoctorDashboardQueryHandler(
             .Include(a => a.DonationCenter)
             .Where(a => a.ScheduledDate == todayDate && 
                         (a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed))
-            .Where(a => center == null || a.DonationCenterId == center.Id || (a.DonationCenter.CenterType == CenterType.Campaign && a.DonationCenter.Location == center.Location))
             .OrderBy(a => a.StartTime)
             .Select(a => new UpcomingAppointmentDto(
                 a.Id,
@@ -311,7 +259,6 @@ public sealed class GetDoctorDashboardQueryHandler(
     }
 
     private async Task<IReadOnlyList<RecentDonationDto>> GetRecentDonationsAsync(
-        DonationCenter? center,
         CancellationToken cancellationToken)
     {
         var recentDonationsDb = await dbContext.DonationAppointments
@@ -320,7 +267,6 @@ public sealed class GetDoctorDashboardQueryHandler(
                 .ThenInclude(d => d.BloodType)
             .Include(da => da.DonationCenter)
             .Where(da => da.DonationStatus == DonationStatus.Completed || da.DonationStatus == DonationStatus.Approved)
-            .Where(da => center == null || da.DonationCenterId == center.Id || (da.DonationCenter.CenterType == CenterType.Campaign && da.DonationCenter.Location == center.Location))
             .OrderByDescending(da => da.CreatedAt)
             .Take(6)
             .ToListAsync(cancellationToken);
@@ -331,9 +277,9 @@ public sealed class GetDoctorDashboardQueryHandler(
             da.Donor.FullName,
             da.Source switch
             {
+                _ when da.DonationCenter?.CenterType == CenterType.Campaign || da.Source == DonationSource.Campaign => "campaign",
                 DonationSource.MobileApp => "mobileapp",
-                DonationSource.Campaign => "campaign",
-                _ => da.DonationCenter?.CenterType == CenterType.Campaign ? "campaign" : "walkin"
+                _ => "walkin"
             },
             da.CreatedAt.ToString("yyyy-MM-dd")
         )).ToList();

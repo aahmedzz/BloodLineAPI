@@ -22,6 +22,7 @@ public static class DependencyInjection
 
         services.AddTransient<IGamificationService, GamificationService>();
         services.AddTransient<IDonorEligibilityService, DonorEligibilityService>();
+        services.AddTransient<IEmergencyNotificationService, EmergencyNotificationService>();
 
         var pointRuleType = typeof(IPointRule);
         var badgeRuleType = typeof(IBadgeRule);

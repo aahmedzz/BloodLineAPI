@@ -1,3 +1,4 @@
+using BloodLineAPI.Application.Common.Interfaces;
 using FluentValidation;
 using System;
 
@@ -5,7 +6,7 @@ namespace BloodLineAPI.Application.Features.Donations.Commands.AddMedicalRecord;
 
 public class AddMedicalRecordCommandValidator : AbstractValidator<AddMedicalRecordCommand>
 {
-    public AddMedicalRecordCommandValidator()
+    public AddMedicalRecordCommandValidator(IDateTimeProvider dateTimeProvider)
     {
         RuleFor(x => x.DonationId)
             .NotEmpty().WithMessage("Donation ID is required.");
@@ -38,13 +39,19 @@ public class AddMedicalRecordCommandValidator : AbstractValidator<AddMedicalReco
 
         RuleFor(x => x.DeferredUntil)
             .Must(date => string.IsNullOrEmpty(date) || DateOnly.TryParse(date, out _))
-            .WithMessage("Deferred until must be a valid date in YYYY-MM-DD format.");
+            .WithMessage("Deferred until must be a valid date in YYYY-MM-DD format.")
+            .Must(date =>
+            {
+                if (string.IsNullOrEmpty(date)) return true;
+                if (DateOnly.TryParse(date, out var parsedDate))
+                {
+                    return parsedDate >= dateTimeProvider.CurrentLocalDate;
+                }
+                return false;
+            })
+            .WithMessage("Deferred until date cannot be in the past.");
 
-        When(x => x.Status.Equals("deferred", StringComparison.OrdinalIgnoreCase), () =>
-        {
-            RuleFor(x => x.DeferredUntil)
-                .NotEmpty().WithMessage("Deferred until date is required for deferred status.");
-        });
+
 
         RuleFor(x => x.DonationType)
             .NotEmpty().WithMessage("Donation type is required.")

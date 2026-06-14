@@ -16,7 +16,8 @@ namespace BloodLineAPI.Application.Features.Donations.Commands.AddMedicalRecord;
 public sealed class AddMedicalRecordCommandHandler(
     ICurrentUserService currentUserService,
     IApplicationDbContext dbContext,
-    IDateTimeProvider dateTimeProvider)
+    IDateTimeProvider dateTimeProvider,
+    IDonorStatusScheduler donorStatusScheduler)
     : IRequestHandler<AddMedicalRecordCommand, Result<string>>
 {
     public async Task<Result<string>> Handle(
@@ -79,11 +80,18 @@ public sealed class AddMedicalRecordCommandHandler(
         var systolic = decimal.Parse(bpParts[0]);
         var diastolic = decimal.Parse(bpParts[1]);
 
-        // Parse lockout date if not eligible (deferred or ineligible)
+        // Parse lockout date if deferred. Ineligible donors are permanent and do not have a lockout date.
         DateTime? lockoutUntil = null;
-        if (!request.Status.Equals("eligible", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(request.DeferredUntil))
+        if (request.Status.Equals("deferred", StringComparison.OrdinalIgnoreCase))
         {
-            lockoutUntil = DateTime.Parse(request.DeferredUntil).ToUniversalTime();
+            if (!string.IsNullOrEmpty(request.DeferredUntil))
+            {
+                lockoutUntil = DateTime.Parse(request.DeferredUntil).ToUniversalTime();
+            }
+            else
+            {
+                lockoutUntil = dateTimeProvider.ToUtcTime(dateTimeProvider.LocalNow.Date.AddDays(7));
+            }
         }
 
         // Create Medical Screening
@@ -143,6 +151,11 @@ public sealed class AddMedicalRecordCommandHandler(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        if (lockoutUntil.HasValue)
+        {
+            donorStatusScheduler.ScheduleStatusReset(donor.Id, lockoutUntil.Value);
+        }
 
         return Result<string>.Success(donation.DonationCode);
     }

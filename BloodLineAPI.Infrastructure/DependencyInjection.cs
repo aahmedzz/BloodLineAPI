@@ -54,7 +54,9 @@ public static class DependencyInjection
         services.AddScoped<AppointmentReminderJob>();
         services.AddScoped<ChatHistoryCleanupJob>();
         services.AddScoped<AppointmentNoShowJob>();
+        services.AddScoped<DeferralExpiryJob>();
         services.AddScoped<ICampaignScheduler, CampaignScheduler>();
+        services.AddScoped<IDonorStatusScheduler, DonorStatusScheduler>();
         services.AddScoped<ActivateCampaignJob>();
         services.AddScoped<DeactivateCampaignJob>();
         services.AddScoped<CompleteCampaignJob>();
