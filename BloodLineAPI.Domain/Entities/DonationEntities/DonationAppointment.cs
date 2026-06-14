@@ -51,6 +51,8 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             Guid? healthPreScreeningId,
             int existingBookingsInSlot,
             int maxDonorsPerSlot,
+            TimeSpan openTime,
+            TimeSpan closeTime,
             DateTime? lastDonationDate,
             DateTime? activeLockoutUntil,
             Gender donorGender,
@@ -63,7 +65,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                 throw new DomainException("Cannot book an appointment in the past.");
             }
 
-            if (scheduledDate.Date == currentLocalTime.Date && startTime < currentLocalTime.TimeOfDay)
+            if (scheduledDate.Date == currentLocalTime.Date && HasSlotPassed(startTime, currentLocalTime.TimeOfDay, openTime, closeTime))
             {
                 throw new DomainException("Cannot book a time slot that has already passed.");
             }
@@ -93,11 +95,30 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                 HealthPreScreeningId = healthPreScreeningId,
                 ScheduledDate = scheduledDate.Date,
                 StartTime = startTime,
-                EndTime = startTime.Add(TimeSpan.FromMinutes(slotDurationMinutes)),
+                EndTime = TimeSpan.FromTicks(startTime.Add(TimeSpan.FromMinutes(slotDurationMinutes)).Ticks % TimeSpan.TicksPerDay),
                 DonationType = donationType,
                 Status = AppointmentStatus.Pending,
                 Source = source
             };
+        }
+
+        private static bool HasSlotPassed(TimeSpan startTime, TimeSpan currentTime, TimeSpan openTime, TimeSpan closeTime)
+        {
+            if (openTime <= closeTime)
+            {
+                return currentTime > startTime;
+            }
+            else
+            {
+                if (startTime >= openTime)
+                {
+                    return currentTime >= openTime && currentTime > startTime;
+                }
+                else
+                {
+                    return currentTime < openTime && currentTime > startTime;
+                }
+            }
         }
 
         public void Cancel(string reason, DateTime currentLocalTime, int gracePeriodMinutes = 30)
@@ -152,6 +173,8 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             int slotDurationMinutes,
             int existingBookingsInSlot,
             int maxDonorsPerSlot,
+            TimeSpan openTime,
+            TimeSpan closeTime,
             DateTime currentLocalTime,
             int gracePeriodMinutes = 30)
         {
@@ -176,7 +199,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                 throw new DomainException("Cannot reschedule to a past date.");
             }
 
-            if (newDate.Date == currentLocalTime.Date && newStartTime < currentLocalTime.TimeOfDay)
+            if (newDate.Date == currentLocalTime.Date && HasSlotPassed(newStartTime, currentLocalTime.TimeOfDay, openTime, closeTime))
             {
                 throw new DomainException("Cannot reschedule to a time slot that has already passed.");
             }
@@ -188,7 +211,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
 
             ScheduledDate = newDate.Date;
             StartTime = newStartTime;
-            EndTime = newStartTime.Add(TimeSpan.FromMinutes(slotDurationMinutes));
+            EndTime = TimeSpan.FromTicks(newStartTime.Add(TimeSpan.FromMinutes(slotDurationMinutes)).Ticks % TimeSpan.TicksPerDay);
             DonationCenterId = newCenterId;
         }
 

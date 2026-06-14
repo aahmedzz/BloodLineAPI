@@ -27,12 +27,21 @@ public sealed class RescheduleAppointmentCommandHandler(
             ?? throw new NotFoundException("DonationAppointment", request.AppointmentId);
 
         var center = appointment.DonationCenter;
+        var hours = center.ResolveOperatingHours(
+            request.NewScheduledDate, center.CenterExclusions.ToList(), center.OpeningHours.ToList());
+        if (hours is null)
+        {
+            return Result<CreateAppointmentResultDto>.Failure("The center is closed on the selected date.");
+        }
+
+        var (open, close, maxPerSlot) = hours.Value;
+
         if (DateOnly.FromDateTime(request.NewScheduledDate) < dateTimeProvider.CurrentLocalDate)
         {
             return Result<CreateAppointmentResultDto>.Failure("Cannot reschedule to a past date.");
         }
 
-        if (DateOnly.FromDateTime(request.NewScheduledDate) == dateTimeProvider.CurrentLocalDate && request.NewStartTime < dateTimeProvider.CurrentLocalTimeOfDay)
+        if (DateOnly.FromDateTime(request.NewScheduledDate) == dateTimeProvider.CurrentLocalDate && HasSlotPassed(request.NewStartTime, dateTimeProvider.CurrentLocalTimeOfDay, open, close))
         {
             return Result<CreateAppointmentResultDto>.Failure("Cannot reschedule to a time slot that has already passed.");
         }
@@ -42,15 +51,7 @@ public sealed class RescheduleAppointmentCommandHandler(
             return Result<CreateAppointmentResultDto>.Failure("The center is not operating on the selected date.");
         }
 
-        var hours = center.ResolveOperatingHours(
-            request.NewScheduledDate, center.CenterExclusions.ToList(), center.OpeningHours.ToList());
-        if (hours is null)
-        {
-            return Result<CreateAppointmentResultDto>.Failure("The center is closed on the selected date.");
-        }
-
-        var (open, close, maxPerSlot) = hours.Value;
-        if (request.NewStartTime < open || request.NewStartTime >= close)
+        if (!IsTimeInOperatingInterval(request.NewStartTime, open, close))
         {
             return Result<CreateAppointmentResultDto>.Failure("Selected time is outside center operating hours.");
         }
@@ -71,6 +72,8 @@ public sealed class RescheduleAppointmentCommandHandler(
             slotDuration,
             bookingCount,
             maxPerSlot,
+            open,
+            close,
             dateTimeProvider.LocalNow,
             appointmentSettings.Value.GracePeriodMinutes);
 
@@ -84,5 +87,36 @@ public sealed class RescheduleAppointmentCommandHandler(
             appointment.DonationType.ToString(),
             center.Name,
             appointment.Status.ToString()));
+    }
+
+    private static bool IsTimeInOperatingInterval(TimeSpan time, TimeSpan open, TimeSpan close)
+    {
+        if (open <= close)
+        {
+            return time >= open && time < close;
+        }
+        else
+        {
+            return time >= open || time < close;
+        }
+    }
+
+    private static bool HasSlotPassed(TimeSpan startTime, TimeSpan currentTime, TimeSpan open, TimeSpan close)
+    {
+        if (open <= close)
+        {
+            return currentTime > startTime;
+        }
+        else
+        {
+            if (startTime >= open)
+            {
+                return currentTime >= open && currentTime > startTime;
+            }
+            else
+            {
+                return currentTime < open && currentTime > startTime;
+            }
+        }
     }
 }

@@ -294,7 +294,7 @@ public sealed class CreateDonationCommandHandler(
         var slots = center.GenerateTimeSlotsForDate(localNow, center.CenterExclusions.ToList(), center.OpeningHours.ToList());
         var time = localNow.TimeOfDay;
         var matchingSlot = slots.Cast<(TimeSpan Start, TimeSpan End, int MaxPerSlot)?>()
-            .FirstOrDefault(s => s.HasValue && time >= s.Value.Start && time < s.Value.End);
+            .FirstOrDefault(s => s.HasValue && IsTimeInSlot(time, s.Value.Start, s.Value.End));
 
         if (matchingSlot != null)
         {
@@ -303,18 +303,44 @@ public sealed class CreateDonationCommandHandler(
 
         if (center.CenterType == CenterType.Campaign)
         {
-            var bufferOpen = center.StartTime.Add(TimeSpan.FromMinutes(-30));
-            var bufferClose = center.EndTime.Add(TimeSpan.FromMinutes(30));
+            var bufferOpen = TimeSpan.FromTicks(center.StartTime.Add(TimeSpan.FromMinutes(-30)).Ticks % TimeSpan.TicksPerDay);
+            if (bufferOpen < TimeSpan.Zero) bufferOpen = bufferOpen.Add(TimeSpan.FromDays(1));
+
+            var bufferClose = TimeSpan.FromTicks(center.EndTime.Add(TimeSpan.FromMinutes(30)).Ticks % TimeSpan.TicksPerDay);
+            if (bufferClose < TimeSpan.Zero) bufferClose = bufferClose.Add(TimeSpan.FromDays(1));
+
+            bool inBuffer;
+            if (bufferOpen <= bufferClose)
+            {
+                inBuffer = time >= bufferOpen && time <= bufferClose;
+            }
+            else
+            {
+                inBuffer = time >= bufferOpen || time <= bufferClose;
+            }
             
-            if (time >= bufferOpen && time <= bufferClose)
+            if (inBuffer)
             {
                 var slotDuration = center.SlotDurationMinutes ?? 15;
-                return Result<(TimeSpan, TimeSpan)>.Success((time, time.Add(TimeSpan.FromMinutes(slotDuration))));
+                var slotEnd = TimeSpan.FromTicks(time.Add(TimeSpan.FromMinutes(slotDuration)).Ticks % TimeSpan.TicksPerDay);
+                return Result<(TimeSpan, TimeSpan)>.Success((time, slotEnd));
             }
 
             return Result<(TimeSpan, TimeSpan)>.Failure("The campaign is currently closed or has no available slots at this time.");
         }
 
         return Result<(TimeSpan, TimeSpan)>.Failure("The center is currently closed or has no available slots at this time.");
+    }
+
+    private static bool IsTimeInSlot(TimeSpan time, TimeSpan start, TimeSpan end)
+    {
+        if (start <= end)
+        {
+            return time >= start && time < end;
+        }
+        else
+        {
+            return time >= start || time < end;
+        }
     }
 }

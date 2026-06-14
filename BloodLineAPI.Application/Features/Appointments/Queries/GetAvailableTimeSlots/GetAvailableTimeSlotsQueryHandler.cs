@@ -30,9 +30,24 @@ public sealed class GetAvailableTimeSlotsQueryHandler(
             return [];
         }
 
+        var operatingHours = center.ResolveOperatingHours(
+            request.Date, center.CenterExclusions.ToList(), center.OpeningHours.ToList());
+        var (open, close, _) = operatingHours ?? (center.StartTime, center.EndTime, center.MaxDonorsPerSlot);
+
         var nowTime = dateTimeProvider.CurrentLocalTimeOfDay;
         var availableSlots = DateOnly.FromDateTime(request.Date) == dateTimeProvider.CurrentLocalDate
-            ? slots.Where(s => s.Start >= nowTime).ToList()
+            ? slots.Where(s => 
+              {
+                  if (open > close)
+                  {
+                      // If slot start is before the center opening time, it logically falls on the next calendar day.
+                      if (s.Start < open)
+                      {
+                          return true;
+                      }
+                  }
+                  return s.Start >= nowTime;
+              }).ToList()
             : slots.ToList();
 
         var bookedSlots = await dbContext.DonationAppointments

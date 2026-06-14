@@ -99,10 +99,16 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             var slots = new List<(TimeSpan Start, TimeSpan End, int MaxPerSlot)>();
             var current = open;
 
-            while (current.Add(TimeSpan.FromMinutes(slotMinutes)) <= close)
+            var adjustedClose = close < open ? close.Add(TimeSpan.FromDays(1)) : close;
+
+            while (current.Add(TimeSpan.FromMinutes(slotMinutes)) <= adjustedClose)
             {
                 var end = current.Add(TimeSpan.FromMinutes(slotMinutes));
-                slots.Add((current, end, maxPerSlot));
+                
+                var slotStart = TimeSpan.FromTicks(current.Ticks % TimeSpan.TicksPerDay);
+                var slotEnd = TimeSpan.FromTicks(end.Ticks % TimeSpan.TicksPerDay);
+
+                slots.Add((slotStart, slotEnd, maxPerSlot));
                 current = end;
             }
 
@@ -116,13 +122,50 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                 return date.Date >= StartDate.Date && (EndDate == null || date.Date <= EndDate.Value.Date);
             }
 
-            if (date.Date < StartDate.Date) return false;
-            if (EndDate.HasValue && date.Date > EndDate.Value.Date) return false;
-            if (RecurrenceEndDate.HasValue && date.Date > RecurrenceEndDate.Value.Date) return false;
+            if (date.TimeOfDay == TimeSpan.Zero)
+            {
+                return IsScheduledForDate(date);
+            }
+
+            if (IsScheduledForDate(date))
+            {
+                var time = date.TimeOfDay;
+                if (StartTime <= EndTime)
+                {
+                    if (time >= StartTime && time <= EndTime)
+                        return true;
+                }
+                else
+                {
+                    if (time >= StartTime)
+                        return true;
+                }
+            }
+
+            if (StartTime > EndTime)
+            {
+                var prevDate = date.AddDays(-1);
+                if (IsScheduledForDate(prevDate))
+                {
+                    var time = date.TimeOfDay;
+                    if (time <= EndTime)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsScheduledForDate(DateTime date)
+        {
+            var targetDate = date.Date;
+            if (targetDate < StartDate.Date) return false;
+            if (EndDate.HasValue && targetDate > EndDate.Value.Date) return false;
+            if (RecurrenceEndDate.HasValue && targetDate > RecurrenceEndDate.Value.Date) return false;
 
             if (!RecurrenceEnabled || RecurrenceType == BloodLineAPI.Domain.Enums.RecurrenceType.None)
             {
-                return date.Date == StartDate.Date;
+                return targetDate == StartDate.Date;
             }
 
             switch (RecurrenceType)
@@ -131,15 +174,15 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                     return true;
 
                 case BloodLineAPI.Domain.Enums.RecurrenceType.Weekly:
-                    return date.DayOfWeek == StartDate.DayOfWeek;
+                    return targetDate.DayOfWeek == StartDate.DayOfWeek;
 
                 case BloodLineAPI.Domain.Enums.RecurrenceType.Monthly:
-                    return date.Day == StartDate.Day;
+                    return targetDate.Day == StartDate.Day;
 
                 case BloodLineAPI.Domain.Enums.RecurrenceType.Custom:
                     if (string.IsNullOrEmpty(RecurrenceWeekDays)) return false;
                     var allowedDays = RecurrenceWeekDays.Split(',').Select(int.Parse).ToList();
-                    return allowedDays.Contains((int)date.DayOfWeek);
+                    return allowedDays.Contains((int)targetDate.DayOfWeek);
 
                 default:
                     return false;

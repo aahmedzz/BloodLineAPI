@@ -36,7 +36,7 @@ public sealed class GetCampaignAppointmentsQueryHandler(
                 .ThenInclude(d => d.BloodType)
             .Include(a => a.Donor)
                 .ThenInclude(d => d.User)
-            .Where(a => a.DonationCenterId == campaign.Id && a.Status != AppointmentStatus.Pending)
+            .Where(a => a.DonationCenterId == campaign.Id && a.Status != AppointmentStatus.Pending && a.Source == DonationSource.MobileApp)
             .OrderBy(a => a.ScheduledDate)
                 .ThenBy(a => a.StartTime)
             .ToListAsync(cancellationToken);
@@ -57,7 +57,8 @@ public sealed class GetCampaignAppointmentsQueryHandler(
                 AppointmentStatus.Completed => "completed",
                 AppointmentStatus.Cancelled => "cancelled",
                 AppointmentStatus.NoShow => "missed",
-                _ => "booked"
+                _ => app.DonationStatus == DonationStatus.Approved ? "approved" :
+                     app.CheckInTime != null ? "inProgress" : "booked"
             };
 
             slots.Add(new CampaignAppointmentSlotDto(
