@@ -8,4 +8,8 @@ public record GetFilteredDonationsQuery(
     int Limit = 10,
     string? Search = null,
     string? BloodType = null,
-    string? District = null) : IRequest<Result<PaginatedDonationResult>>;
+    string? DonationSource = null,
+    string? DonationStatus = null,
+    string? DatePreset = null,
+    string? FromDate = null,
+    string? ToDate = null) : IRequest<Result<PaginatedDonationResult>>;

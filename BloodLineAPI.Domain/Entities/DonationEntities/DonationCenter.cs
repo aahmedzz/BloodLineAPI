@@ -88,28 +88,71 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             IReadOnlyList<CenterExclusion>? exclusions = null,
             IReadOnlyList<OpeningHours>? weeklyHours = null)
         {
-            var hours = ResolveOperatingHours(date, exclusions, weeklyHours);
-            if (hours is null)
+            var slots = new List<(TimeSpan Start, TimeSpan End, int MaxPerSlot)>();
+
+            // 1. Generate slots starting on this date (if scheduled)
+            if (IsScheduledForDate(date)) // date-only check: scheduled for today
             {
-                return [];
+                var hours = ResolveOperatingHours(date, exclusions, weeklyHours);
+                if (hours is not null)
+                {
+                    var (open, close, maxPerSlot) = hours.Value;
+                    var slotMinutes = SlotDurationMinutes ?? 15;
+                    var current = open;
+
+                    if (open <= close)
+                    {
+                        // Standard non-overnight slot generation
+                        while (current.Add(TimeSpan.FromMinutes(slotMinutes)) <= close)
+                        {
+                            var end = current.Add(TimeSpan.FromMinutes(slotMinutes));
+                            slots.Add((current, end, maxPerSlot));
+                            current = end;
+                        }
+                    }
+                    else
+                    {
+                        // Overnight campaign: generate slots starting today up to midnight (24:00)
+                        var midnight = TimeSpan.FromHours(24);
+                        while (current.Add(TimeSpan.FromMinutes(slotMinutes)) <= midnight)
+                        {
+                            var end = current.Add(TimeSpan.FromMinutes(slotMinutes));
+                            
+                            var slotStart = TimeSpan.FromTicks(current.Ticks % TimeSpan.TicksPerDay);
+                            var slotEnd = TimeSpan.FromTicks(end.Ticks % TimeSpan.TicksPerDay);
+                            
+                            slots.Add((slotStart, slotEnd, maxPerSlot));
+                            current = end;
+                        }
+                    }
+                }
             }
 
-            var (open, close, maxPerSlot) = hours.Value;
-            var slotMinutes = SlotDurationMinutes ?? 15;
-            var slots = new List<(TimeSpan Start, TimeSpan End, int MaxPerSlot)>();
-            var current = open;
-
-            var adjustedClose = close < open ? close.Add(TimeSpan.FromDays(1)) : close;
-
-            while (current.Add(TimeSpan.FromMinutes(slotMinutes)) <= adjustedClose)
+            // 2. Generate slots ending on this date from a session that started yesterday (if overnight)
+            if (CenterType == CenterType.Campaign && StartTime > EndTime)
             {
-                var end = current.Add(TimeSpan.FromMinutes(slotMinutes));
-                
-                var slotStart = TimeSpan.FromTicks(current.Ticks % TimeSpan.TicksPerDay);
-                var slotEnd = TimeSpan.FromTicks(end.Ticks % TimeSpan.TicksPerDay);
+                var yesterday = date.AddDays(-1);
+                if (IsScheduledForDate(yesterday)) // date-only check: scheduled for yesterday
+                {
+                    var hours = ResolveOperatingHours(yesterday, exclusions, weeklyHours);
+                    if (hours is not null)
+                    {
+                        var (_, close, maxPerSlot) = hours.Value;
+                        var slotMinutes = SlotDurationMinutes ?? 15;
+                        var current = TimeSpan.Zero; // starts at midnight
 
-                slots.Add((slotStart, slotEnd, maxPerSlot));
-                current = end;
+                        while (current.Add(TimeSpan.FromMinutes(slotMinutes)) <= close)
+                        {
+                            var end = current.Add(TimeSpan.FromMinutes(slotMinutes));
+                            
+                            var slotStart = TimeSpan.FromTicks(current.Ticks % TimeSpan.TicksPerDay);
+                            var slotEnd = TimeSpan.FromTicks(end.Ticks % TimeSpan.TicksPerDay);
+                            
+                            slots.Add((slotStart, slotEnd, maxPerSlot));
+                            current = end;
+                        }
+                    }
+                }
             }
 
             return slots;
@@ -124,7 +167,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
 
             if (date.TimeOfDay == TimeSpan.Zero)
             {
-                return IsScheduledForDate(date);
+                return IsScheduledForDate(date) || (StartTime > EndTime && IsScheduledForDate(date.AddDays(-1)));
             }
 
             if (IsScheduledForDate(date))
@@ -161,6 +204,12 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             var targetDate = date.Date;
             if (targetDate < StartDate.Date) return false;
             if (EndDate.HasValue && targetDate > EndDate.Value.Date) return false;
+
+            if (CenterType != CenterType.Campaign)
+            {
+                return true;
+            }
+
             if (RecurrenceEndDate.HasValue && targetDate > RecurrenceEndDate.Value.Date) return false;
 
             if (!RecurrenceEnabled || RecurrenceType == BloodLineAPI.Domain.Enums.RecurrenceType.None)

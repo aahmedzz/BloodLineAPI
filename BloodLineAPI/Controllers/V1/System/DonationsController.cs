@@ -38,10 +38,14 @@ public class DonationsController(ISender sender) : ControllerBase
         [FromQuery] int limit = 10,
         [FromQuery] string? search = null,
         [FromQuery] string? bloodType = null,
-        [FromQuery] string? district = null,
+        [FromQuery] string? donationSource = null,
+        [FromQuery] string? donationStatus = null,
+        [FromQuery] string? datePreset = null,
+        [FromQuery] string? fromDate = null,
+        [FromQuery] string? toDate = null,
         CancellationToken cancellationToken = default)
     {
-        var query = new GetFilteredDonationsQuery(page, limit, search, bloodType, district);
+        var query = new GetFilteredDonationsQuery(page, limit, search, bloodType, donationSource, donationStatus, datePreset, fromDate, toDate);
         var result = await sender.Send(query, cancellationToken);
         if (!result.IsSuccess)
         {

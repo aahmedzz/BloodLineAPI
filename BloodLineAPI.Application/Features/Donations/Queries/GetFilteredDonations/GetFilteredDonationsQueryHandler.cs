@@ -60,11 +60,86 @@ public sealed class GetFilteredDonationsQueryHandler(IApplicationDbContext dbCon
             }
         }
 
-        // 3. Apply District Filter
-        if (!string.IsNullOrWhiteSpace(request.District))
+        // 3. Apply DonationSource Filter
+        if (!string.IsNullOrWhiteSpace(request.DonationSource))
         {
-            var dist = request.District.Trim();
-            query = query.Where(da => da.Donor.District != null && da.Donor.District.Contains(dist));
+            var sourceStr = request.DonationSource.Trim();
+            if (sourceStr.Equals("Application", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(da => da.Source == DonationSource.MobileApp);
+            }
+            else if (sourceStr.Equals("Campaign", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(da => da.Source == DonationSource.Campaign);
+            }
+            else if (sourceStr.Equals("WalkIn", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(da => da.Source == DonationSource.WalkIn);
+            }
+        }
+
+        // 4. Apply DonationStatus Filter
+        if (!string.IsNullOrWhiteSpace(request.DonationStatus))
+        {
+            var statusStr = request.DonationStatus.Trim();
+            if (statusStr.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(da => !da.SentToLab);
+            }
+            else if (statusStr.Equals("SentToLab", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(da => da.SentToLab);
+            }
+        }
+
+        // 5. Apply Date Preset or Custom Date Range Filter
+        if (!string.IsNullOrWhiteSpace(request.DatePreset))
+        {
+            var todayLocal = dateTimeProvider.CurrentLocalDate;
+            DateTime localStart = DateTime.MinValue;
+            DateTime localEnd = DateTime.MinValue;
+            bool validPreset = false;
+
+            if (request.DatePreset.Equals("today", StringComparison.OrdinalIgnoreCase))
+            {
+                localStart = todayLocal.ToDateTime(TimeOnly.MinValue);
+                localEnd = todayLocal.AddDays(1).ToDateTime(TimeOnly.MinValue);
+                validPreset = true;
+            }
+            else if (request.DatePreset.Equals("thisWeek", StringComparison.OrdinalIgnoreCase))
+            {
+                int daysSinceSaturday = ((int)todayLocal.DayOfWeek - (int)DayOfWeek.Saturday + 7) % 7;
+                var startOfWeek = todayLocal.AddDays(-daysSinceSaturday);
+                localStart = startOfWeek.ToDateTime(TimeOnly.MinValue);
+                localEnd = startOfWeek.AddDays(7).ToDateTime(TimeOnly.MinValue);
+                validPreset = true;
+            }
+            else if (request.DatePreset.Equals("thisMonth", StringComparison.OrdinalIgnoreCase))
+            {
+                var startOfMonth = new DateOnly(todayLocal.Year, todayLocal.Month, 1);
+                localStart = startOfMonth.ToDateTime(TimeOnly.MinValue);
+                localEnd = startOfMonth.AddMonths(1).ToDateTime(TimeOnly.MinValue);
+                validPreset = true;
+            }
+
+            if (validPreset)
+            {
+                query = query.Where(da => da.CreatedAt >= localStart && da.CreatedAt < localEnd);
+            }
+        }
+        else
+        {
+            if (!string.IsNullOrWhiteSpace(request.FromDate) && DateOnly.TryParse(request.FromDate, out var fromDateVal))
+            {
+                var localFrom = fromDateVal.ToDateTime(TimeOnly.MinValue);
+                query = query.Where(da => da.CreatedAt >= localFrom);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.ToDate) && DateOnly.TryParse(request.ToDate, out var toDateVal))
+            {
+                var localTo = toDateVal.AddDays(1).ToDateTime(TimeOnly.MinValue);
+                query = query.Where(da => da.CreatedAt < localTo);
+            }
         }
 
         // 4. Pagination bounds
@@ -158,7 +233,7 @@ public sealed class GetFilteredDonationsQueryHandler(IApplicationDbContext dbCon
             {
                 sourceValue = "mobileapp";
             }
-            else if (da.Source == DonationSource.Campaign || (da.DonationCenter != null && da.DonationCenter.CenterType == CenterType.Campaign))
+            else if (da.Source == DonationSource.Campaign)
             {
                 sourceValue = "campaign";
             }
