@@ -89,7 +89,11 @@ public static class DependencyInjection
             };
         });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            // Policy named "Lab" accepts both the legacy role name and the contract's "lab" role.
+            options.AddPolicy("Lab", policy => policy.RequireRole("LabDoctor", "lab"));
+        });
 
         services.AddApiVersioning(options =>
         {
