@@ -39,6 +39,7 @@ public class ApplicationDbContext(
     public DbSet<DonorBadge> DonorBadges { get; set; } = null!;
     public DbSet<InventoryTransaction> InventoryTransactions { get; set; } = null!;
     public DbSet<DiscardRecord> DiscardRecords { get; set; } = null!;
+    public DbSet<IssuanceRecord> IssuanceRecords { get; set; } = null!;
     public DbSet<UrgentBloodAppeal> UrgentBloodAppeals { get; set; } = null!;
     public DbSet<DeviceToken> DeviceTokens { get; set; } = null!;
     public DbSet<BloodStockThreshold> BloodStockThresholds { get; set; } = null!;

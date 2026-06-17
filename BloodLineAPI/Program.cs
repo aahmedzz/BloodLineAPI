@@ -55,6 +55,11 @@ if (recurringJobManager is not null)
         "chat-history-cleanup",
         job => job.ExecuteAsync(CancellationToken.None),
         "0 3 * * *"); // Daily at 3:00 AM UTC
+
+    recurringJobManager.AddOrUpdate<BloodBagExpiryJob>(
+        "blood-bag-expiry",
+        job => job.ExecuteAsync(),
+        "0 0 * * *"); // Daily at midnight UTC
 }
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();

@@ -28,6 +28,7 @@ public interface IApplicationDbContext
     DbSet<DonorBadge> DonorBadges { get; }
     DbSet<InventoryTransaction> InventoryTransactions { get; }
     DbSet<DiscardRecord> DiscardRecords { get; }
+    DbSet<IssuanceRecord> IssuanceRecords { get; }
     DbSet<UrgentBloodAppeal> UrgentBloodAppeals { get; }
     DbSet<DeviceToken> DeviceTokens { get; }
     DbSet<BloodStockThreshold> BloodStockThresholds { get; }

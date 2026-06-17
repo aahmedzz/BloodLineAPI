@@ -22,6 +22,7 @@ namespace BloodLineAPI.Domain.Entities
         public ICollection<MedicalScreening> MedicalScreenings { get; set; } = new List<MedicalScreening>();
         public ICollection<InventoryTransaction> InventoryTransactions { get; set; } = new List<InventoryTransaction>();
         public ICollection<DiscardRecord> AuthorizedDiscardRecords { get; set; } = new List<DiscardRecord>();
+        public ICollection<IssuanceRecord> IssuedBloodBags { get; set; } = new List<IssuanceRecord>();
         public ICollection<UrgentBloodAppeal> UrgentBloodAppeals { get; set; } = new List<UrgentBloodAppeal>();
     }
 }

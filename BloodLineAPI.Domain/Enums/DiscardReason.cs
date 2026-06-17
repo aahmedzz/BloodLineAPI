@@ -3,7 +3,9 @@ namespace BloodLineAPI.Domain.Enums;
 public enum DiscardReason
 {
     Expired,
-    LabRejected,
-    PhysicalDamage,
+    FailedScreening,
+    DamagedStorage,
+    Contaminated,
+    PreparationError,
     Other
 }

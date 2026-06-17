@@ -60,9 +60,11 @@ public static class DependencyInjection
         services.AddScoped<ActivateCampaignJob>();
         services.AddScoped<DeactivateCampaignJob>();
         services.AddScoped<CompleteCampaignJob>();
+        services.AddScoped<BloodBagExpiryJob>();
 
         services.Configure<DonationCooldownSettings>(configuration.GetSection("DonationCooldown"));
         services.Configure<AppointmentSettings>(configuration.GetSection("Appointment"));
+        services.Configure<BloodBagExpirySettings>(configuration.GetSection("BloodBagExpiry"));
 
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         if (!string.IsNullOrWhiteSpace(connectionString))
