@@ -11,10 +11,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BloodLineAPI.Infrastructure.Persistence;
 
-public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IPublisher? publisher = null)
+public class ApplicationDbContext(
+    DbContextOptions<ApplicationDbContext> options,
+    IDateTimeProvider dateTimeProvider,
+    IPublisher? publisher = null)
     : IdentityDbContext<User, Role, Guid, IdentityUserClaim<Guid>, UserRole, IdentityUserLogin<Guid>, IdentityRoleClaim<Guid>, IdentityUserToken<Guid>>(options), IApplicationDbContext
 {
     private readonly IPublisher? _publisher = publisher;
+    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
 
     public DbSet<Staff> Staff { get; set; } = null!;
     public DbSet<Donor> Donors { get; set; } = null!;
@@ -43,7 +47,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        var utcNow = DateTime.UtcNow;
+        var utcNow = _dateTimeProvider.LocalNow;
 
         foreach (var entry in ChangeTracker.Entries<AuditableEntity>())
         {

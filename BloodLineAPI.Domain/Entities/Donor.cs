@@ -27,6 +27,8 @@ namespace BloodLineAPI.Domain.Entities
         public int MonthlyPoints { get; set; } = 0;
         public int TotalDonationCount { get; set; } = 0;
         public bool AllowLeaderboardVisibility { get; set; } = true;
+        public DonorStatus Status { get; set; } = DonorStatus.Eligible;
+        public DateTime? LockoutUntil { get; set; }
         public string FullName => string.Join(" ", new[] { FirstName, SecondName, ThirdName, FourthName }
             .Where(static n => !string.IsNullOrWhiteSpace(n)));
 

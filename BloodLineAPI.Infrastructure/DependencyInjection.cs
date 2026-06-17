@@ -35,6 +35,7 @@ public static class DependencyInjection
             sp.GetRequiredService<ApplicationDbContext>());
 
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+        services.AddSingleton<IDateTimeProvider, Services.DateTimeProvider>();
         services.AddScoped<IJwtGenerator, JwtGenerator>();
         services.AddScoped<IRegistrationOtpService, RegistrationOtpService>();
 
@@ -52,6 +53,13 @@ public static class DependencyInjection
 
         services.AddScoped<AppointmentReminderJob>();
         services.AddScoped<ChatHistoryCleanupJob>();
+        services.AddScoped<AppointmentNoShowJob>();
+        services.AddScoped<DeferralExpiryJob>();
+        services.AddScoped<ICampaignScheduler, CampaignScheduler>();
+        services.AddScoped<IDonorStatusScheduler, DonorStatusScheduler>();
+        services.AddScoped<ActivateCampaignJob>();
+        services.AddScoped<DeactivateCampaignJob>();
+        services.AddScoped<CompleteCampaignJob>();
 
         services.Configure<DonationCooldownSettings>(configuration.GetSection("DonationCooldown"));
         services.Configure<AppointmentSettings>(configuration.GetSection("Appointment"));

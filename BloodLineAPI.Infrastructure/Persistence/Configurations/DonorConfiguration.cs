@@ -1,4 +1,5 @@
 using BloodLineAPI.Domain.Entities;
+using BloodLineAPI.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;
@@ -50,6 +51,10 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
                 .OnDelete(DeleteBehavior.Restrict)
                 .IsRequired(false);
             builder.Property(d => d.Gender).HasConversion<string>();
+            builder.Property(d => d.Status)
+                .HasConversion<string>()
+                .HasDefaultValue(DonorStatus.Eligible)
+                .HasMaxLength(20);
             builder.HasOne(d => d.User)
                 .WithOne(u => u.Donor)
                 .HasForeignKey<Donor>(d => d.Id)

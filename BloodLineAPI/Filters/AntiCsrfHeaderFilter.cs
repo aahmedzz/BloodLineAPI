@@ -15,9 +15,15 @@ public class AntiCsrfHeaderFilter : IAsyncActionFilter
             .OfType<ApiAudienceAttribute>()
             .Any(a => a.Audience == Audience.System);
 
-        if (isSystemEndpoint)
+        var method = context.HttpContext.Request.Method;
+        var isSafeMethod = string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase) ||
+                           string.Equals(method, "HEAD", StringComparison.OrdinalIgnoreCase) ||
+                           string.Equals(method, "OPTIONS", StringComparison.OrdinalIgnoreCase) ||
+                           string.Equals(method, "TRACE", StringComparison.OrdinalIgnoreCase);
+
+        if (isSystemEndpoint && !isSafeMethod)
         {
-            // If it's a System endpoint, enforce the CSRF header
+            // If it's a System endpoint and not a safe method, enforce the CSRF header
             if (!context.HttpContext.Request.Headers.ContainsKey(ExpectedHeader))
             {
                 context.Result = new BadRequestObjectResult(new { message = $"Missing required '{ExpectedHeader}' header for CSRF protection." });

@@ -14,7 +14,9 @@ namespace BloodLineAPI.Application.Features.Appointments.Commands.CreateAppointm
 
 public sealed class CreateAppointmentCommandHandler(
     IApplicationDbContext dbContext,
-    IOptions<DonationCooldownSettings> cooldownOptions)
+    IOptions<DonationCooldownSettings> cooldownOptions,
+    IDonorEligibilityService eligibilityService,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<CreateAppointmentCommand, Result<CreateAppointmentResultDto>>
 {
     public async Task<Result<CreateAppointmentResultDto>> Handle(CreateAppointmentCommand request, CancellationToken cancellationToken)
@@ -25,11 +27,6 @@ public sealed class CreateAppointmentCommandHandler(
             .FirstOrDefaultAsync(c => c.Id == request.DonationCenterId, cancellationToken)
             ?? throw new NotFoundException(nameof(DonationCenter), request.DonationCenterId);
 
-        if (!center.IsOperatingOn(request.ScheduledDate))
-        {
-            return Result<CreateAppointmentResultDto>.Failure("The center is not operating on the selected date.");
-        }
-
         var operatingHours = center.ResolveOperatingHours(
             request.ScheduledDate, center.CenterExclusions.ToList(), center.OpeningHours.ToList());
         if (operatingHours is null)
@@ -38,7 +35,23 @@ public sealed class CreateAppointmentCommandHandler(
         }
 
         var (open, close, maxPerSlot) = operatingHours.Value;
-        if (request.StartTime < open || request.StartTime >= close)
+
+        if (DateOnly.FromDateTime(request.ScheduledDate) < dateTimeProvider.CurrentLocalDate)
+        {
+            return Result<CreateAppointmentResultDto>.Failure("Cannot book an appointment in the past.");
+        }
+
+        if (DateOnly.FromDateTime(request.ScheduledDate) == dateTimeProvider.CurrentLocalDate && HasSlotPassed(request.StartTime, dateTimeProvider.CurrentLocalTimeOfDay, open, close))
+        {
+            return Result<CreateAppointmentResultDto>.Failure("Cannot book a time slot that has already passed.");
+        }
+
+        if (!center.IsOperatingOn(request.ScheduledDate))
+        {
+            return Result<CreateAppointmentResultDto>.Failure("The center is not operating on the selected date.");
+        }
+
+        if (!IsTimeInOperatingInterval(request.StartTime, open, close))
         {
             return Result<CreateAppointmentResultDto>.Failure("Selected time is outside center operating hours.");
         }
@@ -58,13 +71,33 @@ public sealed class CreateAppointmentCommandHandler(
         var donor = await dbContext.Donors.FirstOrDefaultAsync(d => d.Id == request.DonorId, cancellationToken)
             ?? throw new NotFoundException(nameof(Donor), request.DonorId);
 
-        // Query active lockout using the correct DonorId FK + LockoutUntil
-        var activeLockout = await dbContext.MedicalScreenings
-            .Where(ms => ms.DonorId == request.DonorId && !ms.IsEligible)
-            .Where(ms => ms.LockoutUntil != null && ms.LockoutUntil > DateTime.UtcNow)
-            .OrderByDescending(ms => ms.LockoutUntil)
-            .Select(ms => ms.LockoutUntil)
-            .FirstOrDefaultAsync(cancellationToken);
+        // Check if the donor already has an upcoming/active booking (Pending or Confirmed)
+        var hasUpcomingBooking = await dbContext.DonationAppointments
+            .AnyAsync(a => a.DonorId == request.DonorId &&
+                           (a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed),
+                       cancellationToken);
+
+        if (hasUpcomingBooking)
+        {
+            return Result<CreateAppointmentResultDto>.Failure("You already have an active or upcoming appointment booked.");
+        }
+
+        // Centralised eligibility check (lockout, cooldown, status)
+        var eligibility = await eligibilityService.CheckEligibilityAsync(
+            donor.Id, request.DonationType, cancellationToken);
+
+        if (!eligibility.IsSuccess)
+        {
+            return Result<CreateAppointmentResultDto>.Failure(eligibility.Error!);
+        }
+
+        if (!eligibility.Data!.IsEligible)
+        {
+            return Result<CreateAppointmentResultDto>.Failure(eligibility.Data.RejectionReason!);
+        }
+
+        // Query active lockout for domain-level Book() guard (kept for defence-in-depth)
+        var activeLockout = eligibility.Data.DeferredUntil;
 
         var slotDuration = center.SlotDurationMinutes ?? 15;
 
@@ -78,10 +111,14 @@ public sealed class CreateAppointmentCommandHandler(
             null,
             bookingCount,
             maxPerSlot,
+            open,
+            close,
             donor.LastDonationDate,
             activeLockout,
             donor.Gender,
-            cooldownOptions.Value);
+            cooldownOptions.Value,
+            dateTimeProvider.LocalNow,
+            source: DonationSource.MobileApp);
 
         dbContext.DonationAppointments.Add(appointment);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -94,5 +131,36 @@ public sealed class CreateAppointmentCommandHandler(
             appointment.DonationType.ToString(),
             center.Name,
             appointment.Status.ToString()));
+    }
+
+    private static bool IsTimeInOperatingInterval(TimeSpan time, TimeSpan open, TimeSpan close)
+    {
+        if (open <= close)
+        {
+            return time >= open && time < close;
+        }
+        else
+        {
+            return time >= open || time < close;
+        }
+    }
+
+    private static bool HasSlotPassed(TimeSpan startTime, TimeSpan currentTime, TimeSpan open, TimeSpan close)
+    {
+        if (open <= close)
+        {
+            return currentTime > startTime;
+        }
+        else
+        {
+            if (startTime >= open)
+            {
+                return currentTime >= open && currentTime > startTime;
+            }
+            else
+            {
+                return currentTime < open && currentTime > startTime;
+            }
+        }
     }
 }

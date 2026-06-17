@@ -10,11 +10,12 @@ namespace BloodLineAPI.Infrastructure.BackgroundJobs;
 public class AppointmentReminderJob(
     IApplicationDbContext dbContext,
     INotificationSender notificationSender,
-    ILogger<AppointmentReminderJob> logger)
+    ILogger<AppointmentReminderJob> logger,
+    IDateTimeProvider dateTimeProvider)
 {
     public async Task ExecuteAsync(CancellationToken ct = default)
     {
-        var now = DateTime.UtcNow;
+        var now = dateTimeProvider.LocalNow;
         var maxHorizon = now.AddHours(25);
 
         var appointments = await dbContext.DonationAppointments
@@ -76,7 +77,7 @@ public class AppointmentReminderJob(
             Message = message,
             Type = type,
             ActionPayload = actionPayload,
-            SentDate = DateTime.UtcNow,
+            SentDate = dateTimeProvider.UtcNow,
             IsSent = false
         };
 

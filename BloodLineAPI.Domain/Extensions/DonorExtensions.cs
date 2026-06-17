@@ -1,3 +1,7 @@
+using System;
+using System.Linq;
+using System.Linq.Expressions;
+using BloodLineAPI.Domain.Common;
 using BloodLineAPI.Domain.Entities;
 using BloodLineAPI.Domain.Enums;
 
@@ -16,5 +20,18 @@ public static class DonorExtensions
         var nextEligibleDate = donor.LastDonationDate.Value.AddMonths(minMonths);
 
         return occurredOn >= nextEligibleDate;
+    }
+
+    public static Expression<Func<Donor, bool>> IsEligiblePredicate(
+        DateTime todayDate, 
+        DateTime utcNow, 
+        DonationCooldownSettings cooldownSettings)
+    {
+        return d => d.Status != DonorStatus.Ineligible && 
+                    (!d.LastDonationDate.HasValue || 
+                     (d.Gender == Gender.Male 
+                         ? d.LastDonationDate.Value.AddDays(cooldownSettings.WholeBloodMaleDays) <= todayDate 
+                         : d.LastDonationDate.Value.AddDays(cooldownSettings.WholeBloodFemaleDays) <= todayDate)) &&
+                    (!d.LockoutUntil.HasValue || d.LockoutUntil <= utcNow);
     }
 }

@@ -1,5 +1,6 @@
 using BloodLineAPI;
 using BloodLineAPI.Application;
+using BloodLineAPI.Filters;
 using BloodLineAPI.Infrastructure;
 using BloodLineAPI.Infrastructure.BackgroundJobs;
 using BloodLineAPI.Infrastructure.Seeding;
@@ -14,7 +15,9 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
             "http://localhost:3000",
-            "http://localhost:5173"
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "https://blood-bank-system-6eaj.vercel.app"
         )
         .AllowAnyHeader()
         .AllowAnyMethod()
@@ -24,6 +27,7 @@ builder.Services.AddCors(options =>
 
 //Add the dependency injection for each layer of the application
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSignalR();
 builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration)
@@ -41,6 +45,11 @@ if (recurringJobManager is not null)
         "appointment-reminders",
         job => job.ExecuteAsync(CancellationToken.None),
         "*/15 * * * *");
+
+    recurringJobManager.AddOrUpdate<AppointmentNoShowJob>(
+        "appointment-no-shows",
+        job => job.ExecuteAsync(CancellationToken.None),
+        "0 * * * *");
 
     recurringJobManager.AddOrUpdate<ChatHistoryCleanupJob>(
         "chat-history-cleanup",
@@ -60,15 +69,20 @@ app.UseSwaggerUI(options =>
 //}
 
 app.UseHttpsRedirection();
-if (recurringJobManager is not null)
-{
-    app.UseHangfireDashboard("/hangfire");
-}
-
 app.UseCors("WebDashboard");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+if (recurringJobManager is not null)
+{
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
+    });
+}
+
 app.MapControllers();
+app.MapHub<BloodLineAPI.Hubs.AppointmentsHub>("/hubs/appointments");
 
 app.Run();

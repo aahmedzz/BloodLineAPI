@@ -33,7 +33,6 @@
 
   <ItemGroup>
     <Folder Include="Controllers\V1\Base\" />
-    <Folder Include="Controllers\V1\System\" />
   </ItemGroup>
 
 </Project>

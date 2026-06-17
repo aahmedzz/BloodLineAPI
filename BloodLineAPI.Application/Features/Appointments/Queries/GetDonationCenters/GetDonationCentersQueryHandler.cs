@@ -1,5 +1,6 @@
 using BloodLineAPI.Application.Common.Interfaces;
 using BloodLineAPI.Application.Features.Appointments.Dtos;
+using BloodLineAPI.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,10 @@ public sealed class GetDonationCentersQueryHandler(IApplicationDbContext dbConte
 {
     public async Task<IReadOnlyList<DonationCenterDto>> Handle(GetDonationCentersQuery request, CancellationToken cancellationToken)
     {
-        var query = dbContext.DonationCenters.AsNoTracking().AsQueryable();
+        var query = dbContext.DonationCenters
+            .AsNoTracking()
+            .Where(c => c.Status == CenterStatus.Active)
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {

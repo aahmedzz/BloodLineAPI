@@ -19,6 +19,15 @@ public class DonationCenterConfiguration : IEntityTypeConfiguration<DonationCent
         builder.Property(dc => dc.Status).HasConversion<string>().HasMaxLength(50);
         builder.Property(dc => dc.SupportedDonationTypes).IsRequired().HasMaxLength(200);
 
+        // Campaign-specific configurations
+        builder.Property(dc => dc.CampaignNumber).ValueGeneratedOnAdd();
+        builder.Property(dc => dc.CampaignCode)
+            .HasComputedColumnSql("'CAM-' + RIGHT('000' + CAST(CampaignNumber AS VARCHAR(10)), 3)", stored: true);
+        builder.Property(dc => dc.RecurrenceType).HasConversion<string>().HasMaxLength(50);
+        builder.Property(dc => dc.RecurrenceWeekDays).HasMaxLength(100);
+        builder.Property(dc => dc.CreatedByName).HasMaxLength(200);
+        builder.Property(dc => dc.ScheduledJobIds).IsRequired(false);
+
         builder.HasData(new DonationCenter
         {
             Id = BeniSuefMainBranchId,

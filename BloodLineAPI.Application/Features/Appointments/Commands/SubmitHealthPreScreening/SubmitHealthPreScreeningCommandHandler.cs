@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BloodLineAPI.Application.Features.Appointments.Commands.SubmitHealthPreScreening;
 
-public sealed class SubmitHealthPreScreeningCommandHandler(IApplicationDbContext dbContext)
+public sealed class SubmitHealthPreScreeningCommandHandler(IApplicationDbContext dbContext, IDateTimeProvider dateTimeProvider)
     : IRequestHandler<SubmitHealthPreScreeningCommand, Result<HealthPreScreeningResultDto>>
 {
     public async Task<Result<HealthPreScreeningResultDto>> Handle(SubmitHealthPreScreeningCommand request, CancellationToken cancellationToken)
@@ -28,7 +28,8 @@ public sealed class SubmitHealthPreScreeningCommandHandler(IApplicationDbContext
             request.HasRecentTattooOrPiercingInPast6Months,
             request.HasDentalProcedureInPastWeek,
             request.HasCurrentFeverInfectionOrSevereCold,
-            request.HasChronicIllnessAffectingBloodDonation);
+            request.HasChronicIllnessAffectingBloodDonation,
+            dateTimeProvider.LocalNow);
 
         dbContext.HealthPreScreenings.Add(screening);
         appointment.AttachHealthPreScreening(request.DonorId, screening.Id);
@@ -40,7 +41,7 @@ public sealed class SubmitHealthPreScreeningCommandHandler(IApplicationDbContext
         if (!screening.IsEligible)
         {
             (ineligibilityReason, recommendation) = BuildIneligibilityContent(request);
-            appointment.CancelDueToIneligiblePreScreening();
+            appointment.CancelDueToIneligiblePreScreening(dateTimeProvider.LocalNow);
             appointmentCancelled = true;
         }
 

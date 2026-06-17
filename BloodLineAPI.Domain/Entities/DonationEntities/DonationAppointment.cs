@@ -1,3 +1,5 @@
+using BloodLineAPI.Domain.Events;
+
 namespace BloodLineAPI.Domain.Entities.DonationEntities
 {
     public class DonationAppointment : AuditableEntity
@@ -8,18 +10,27 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
         public DateTime ScheduledDate { get; private set; }
         public TimeSpan StartTime { get; private set; }
         public TimeSpan EndTime { get; private set; }
-        public DonationType DonationType { get; private set; }
+        public DonationType DonationType { get; set; }
         public AppointmentStatus Status { get; private set; } = AppointmentStatus.Pending;
         public DonationSource Source { get; private set; } = DonationSource.WalkIn;
         public string? CancellationReason { get; private set; }
         public DateTime? CancelledAt { get; private set; }
         public byte[] RowVersion { get; private set; } = [];
 
+        // New properties for system donation flow
+        public int DonationNumber { get; private set; }
+        public string DonationCode { get; private set; } = string.Empty;
+        public DonationStatus DonationStatus { get; private set; } = DonationStatus.Pending;
+        public bool SentToLab { get; private set; } = false;
+        public Guid? MedicalScreeningId { get; private set; }
+        public TimeSpan? CheckInTime { get; private set; }
+
         public Donor Donor { get; set; } = null!;
         public DonationCenter DonationCenter { get; set; } = null!;
         public HealthPreScreening? HealthPreScreening { get; set; }
         public BloodBag? BloodBag { get; set; }
         public DonationRating? DonationRating { get; set; }
+        public MedicalScreening? MedicalScreening { get; set; }
 
         private DonationAppointment()
         {
@@ -40,15 +51,23 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             Guid? healthPreScreeningId,
             int existingBookingsInSlot,
             int maxDonorsPerSlot,
+            TimeSpan openTime,
+            TimeSpan closeTime,
             DateTime? lastDonationDate,
             DateTime? activeLockoutUntil,
             Gender donorGender,
             DonationCooldownSettings cooldownSettings,
+            DateTime currentLocalTime,
             DonationSource source = DonationSource.WalkIn)
         {
-            if (scheduledDate.Date < DateTime.UtcNow.Date)
+            if (scheduledDate.Date < currentLocalTime.Date)
             {
                 throw new DomainException("Cannot book an appointment in the past.");
+            }
+
+            if (scheduledDate.Date == currentLocalTime.Date && HasSlotPassed(startTime, currentLocalTime.TimeOfDay, openTime, closeTime))
+            {
+                throw new DomainException("Cannot book a time slot that has already passed.");
             }
 
             if (existingBookingsInSlot >= maxDonorsPerSlot)
@@ -62,7 +81,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                 throw new DomainException($"Must wait {cooldownDays} days between donations.");
             }
 
-            if (activeLockoutUntil.HasValue && DateTime.UtcNow < activeLockoutUntil.Value)
+            if (activeLockoutUntil.HasValue && currentLocalTime < activeLockoutUntil.Value)
             {
                 throw new DomainException(
                     $"You are locked out from booking until {activeLockoutUntil.Value:yyyy-MM-dd} due to a failed medical screening.");
@@ -76,14 +95,33 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                 HealthPreScreeningId = healthPreScreeningId,
                 ScheduledDate = scheduledDate.Date,
                 StartTime = startTime,
-                EndTime = startTime.Add(TimeSpan.FromMinutes(slotDurationMinutes)),
+                EndTime = TimeSpan.FromTicks(startTime.Add(TimeSpan.FromMinutes(slotDurationMinutes)).Ticks % TimeSpan.TicksPerDay),
                 DonationType = donationType,
                 Status = AppointmentStatus.Pending,
                 Source = source
             };
         }
 
-        public void Cancel(string reason, int gracePeriodMinutes = 30)
+        private static bool HasSlotPassed(TimeSpan startTime, TimeSpan currentTime, TimeSpan openTime, TimeSpan closeTime)
+        {
+            if (openTime <= closeTime)
+            {
+                return currentTime > startTime;
+            }
+            else
+            {
+                if (startTime >= openTime)
+                {
+                    return currentTime >= openTime && currentTime > startTime;
+                }
+                else
+                {
+                    return currentTime < openTime && currentTime > startTime;
+                }
+            }
+        }
+
+        public void Cancel(string reason, DateTime currentLocalTime, int gracePeriodMinutes = 30)
         {
             if (Status is AppointmentStatus.Cancelled or AppointmentStatus.Completed)
             {
@@ -91,22 +129,22 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             }
 
             var appointmentStart = ScheduledDate.Date.Add(StartTime);
-            if (appointmentStart <= DateTime.UtcNow)
+            if (appointmentStart <= currentLocalTime)
             {
                 throw new DomainException("Cannot cancel an appointment that has already started or passed.");
             }
 
-            if ((appointmentStart - DateTime.UtcNow).TotalMinutes < gracePeriodMinutes)
+            if ((appointmentStart - currentLocalTime).TotalMinutes < gracePeriodMinutes)
             {
                 throw new DomainException($"Cannot cancel within {FormatGracePeriod(gracePeriodMinutes)} of the appointment. Please contact the center directly.");
             }
 
             Status = AppointmentStatus.Cancelled;
             CancellationReason = reason;
-            CancelledAt = DateTime.UtcNow;
+            CancelledAt = currentLocalTime;
         }
 
-        public void CancelDueToIneligiblePreScreening()
+        public void CancelDueToIneligiblePreScreening(DateTime currentLocalTime)
         {
             if (Status is AppointmentStatus.Completed or AppointmentStatus.NoShow)
             {
@@ -120,7 +158,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
 
             Status = AppointmentStatus.Cancelled;
             CancellationReason = "Cancelled automatically due to ineligible health pre-screening.";
-            CancelledAt = DateTime.UtcNow;
+            CancelledAt = currentLocalTime;
         }
 
         /// <summary>
@@ -135,6 +173,9 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             int slotDurationMinutes,
             int existingBookingsInSlot,
             int maxDonorsPerSlot,
+            TimeSpan openTime,
+            TimeSpan closeTime,
+            DateTime currentLocalTime,
             int gracePeriodMinutes = 30)
         {
             if (Status is not AppointmentStatus.Pending and not AppointmentStatus.Confirmed)
@@ -143,19 +184,24 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             }
 
             var currentStart = ScheduledDate.Date.Add(StartTime);
-            if (currentStart <= DateTime.UtcNow)
+            if (currentStart <= currentLocalTime)
             {
                 throw new DomainException("Cannot reschedule a past appointment.");
             }
 
-            if ((currentStart - DateTime.UtcNow).TotalMinutes < gracePeriodMinutes)
+            if ((currentStart - currentLocalTime).TotalMinutes < gracePeriodMinutes)
             {
                 throw new DomainException($"Cannot reschedule within {FormatGracePeriod(gracePeriodMinutes)} of the appointment. Please contact the center directly.");
             }
 
-            if (newDate.Date < DateTime.UtcNow.Date)
+            if (newDate.Date < currentLocalTime.Date)
             {
                 throw new DomainException("Cannot reschedule to a past date.");
+            }
+
+            if (newDate.Date == currentLocalTime.Date && HasSlotPassed(newStartTime, currentLocalTime.TimeOfDay, openTime, closeTime))
+            {
+                throw new DomainException("Cannot reschedule to a time slot that has already passed.");
             }
 
             if (existingBookingsInSlot >= maxDonorsPerSlot)
@@ -165,7 +211,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
 
             ScheduledDate = newDate.Date;
             StartTime = newStartTime;
-            EndTime = newStartTime.Add(TimeSpan.FromMinutes(slotDurationMinutes));
+            EndTime = TimeSpan.FromTicks(newStartTime.Add(TimeSpan.FromMinutes(slotDurationMinutes)).Ticks % TimeSpan.TicksPerDay);
             DonationCenterId = newCenterId;
         }
 
@@ -209,14 +255,161 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             Status = AppointmentStatus.Completed;
         }
 
-        public void MarkNoShow()
+        public void MarkNoShow(DateTime currentLocalTime)
         {
             if (Status is not AppointmentStatus.Pending and not AppointmentStatus.Confirmed)
             {
                 throw new DomainException("Only pending or confirmed appointments can be marked as no-show.");
             }
 
+            var appointmentEnd = ScheduledDate.Date.Add(EndTime);
+            if (appointmentEnd > currentLocalTime)
+            {
+                throw new DomainException("Cannot mark an appointment as no-show before its scheduled time has passed.");
+            }
+
             Status = AppointmentStatus.NoShow;
+        }
+
+        public static DonationAppointment RegisterSystemDonation(
+            Guid donorId,
+            Guid donationCenterId,
+            DonationType donationType,
+            DonationSource source,
+            bool isNewDonor,
+            bool hasAppAccount,
+            TimeSpan slotStart,
+            TimeSpan slotEnd,
+            DateTime currentLocalTime)
+        {
+            var appointment = new DonationAppointment
+            {
+                Id = Guid.NewGuid(),
+                DonorId = donorId,
+                DonationCenterId = donationCenterId,
+                ScheduledDate = currentLocalTime.Date,
+                StartTime = slotStart,
+                EndTime = slotEnd,
+                CheckInTime = currentLocalTime.TimeOfDay,
+                DonationType = donationType,
+                Status = AppointmentStatus.Confirmed,
+                Source = source,
+                DonationStatus = DonationStatus.Pending,
+                SentToLab = false
+            };
+
+            appointment.AddDomainEvent(new DonationRegisteredEvent(
+                donorId,
+                appointment.Id,
+                source,
+                donationType,
+                isNewDonor,
+                hasAppAccount,
+                currentLocalTime));
+
+            return appointment;
+        }
+
+        public void UpdateSystemDonation(Guid donationCenterId, DonationSource source, TimeSpan slotStart, TimeSpan slotEnd, DateTime currentLocalTime)
+        {
+            if (DonationStatus != DonationStatus.Pending)
+            {
+                throw new DomainException("Only pending donations can be updated.");
+            }
+
+            DonationCenterId = donationCenterId;
+            
+            if (Source != DonationSource.MobileApp)
+            {
+                Source = source;
+                ScheduledDate = currentLocalTime.Date;
+                StartTime = slotStart;
+                EndTime = slotEnd;
+            }
+            else
+            {
+                // If it is a mobile app booking for today, keep original slot. Otherwise, move to today's active slot.
+                if (ScheduledDate.Date != currentLocalTime.Date)
+                {
+                    ScheduledDate = currentLocalTime.Date;
+                    StartTime = slotStart;
+                    EndTime = slotEnd;
+                }
+            }
+            
+            CheckInTime = currentLocalTime.TimeOfDay;
+            Status = AppointmentStatus.Confirmed;
+        }
+
+        public void AttachMedicalScreening(Guid screeningId, DateTime currentLocalTime)
+        {
+            if (DonationStatus != DonationStatus.Pending)
+            {
+                throw new DomainException("Medical screening can only be attached to pending donations.");
+            }
+
+            MedicalScreeningId = screeningId;
+            DonationStatus = DonationStatus.Approved;
+
+            AddDomainEvent(new DonationScreeningCompletedEvent(
+                DonorId,
+                Id,
+                screeningId,
+                true,
+                currentLocalTime));
+        }
+
+        public void RejectAfterScreening(Guid screeningId, DateTime currentLocalTime, string? rejectionReason = null)
+        {
+            if (DonationStatus != DonationStatus.Pending)
+            {
+                throw new DomainException("Medical screening can only be attached to pending donations.");
+            }
+
+            MedicalScreeningId = screeningId;
+            DonationStatus = DonationStatus.Rejected;
+
+            Status = AppointmentStatus.Cancelled;
+            CancellationReason = rejectionReason ?? "Cancelled automatically due to ineligible medical screening.";
+            CancelledAt = currentLocalTime;
+
+            AddDomainEvent(new DonationScreeningCompletedEvent(
+                DonorId,
+                Id,
+                screeningId,
+                false,
+                currentLocalTime));
+        }
+
+        public void SendToLab(Guid bloodBagId, DateTime currentLocalTime)
+        {
+            if (DonationStatus != DonationStatus.Approved)
+            {
+                throw new DomainException("Donation must be approved to send to lab.");
+            }
+
+            SentToLab = true;
+            DonationStatus = DonationStatus.Completed;
+            MarkCompleted();
+
+            AddDomainEvent(new DonationSentToLabEvent(
+                DonorId,
+                Id,
+                bloodBagId,
+                currentLocalTime));
+        }
+
+        public void CancelDonation(DateTime currentLocalTime)
+        {
+            if (DonationStatus is DonationStatus.Completed or DonationStatus.Cancelled or DonationStatus.Rejected)
+            {
+                throw new DomainException("Cannot cancel a completed, rejected, or already cancelled donation.");
+            }
+
+            DonationStatus = DonationStatus.Cancelled;
+            Status = AppointmentStatus.Cancelled;
+            CancellationReason = "Problem in collecting the blood donation.";
+            CancelledAt = currentLocalTime;
         }
 
         private static string FormatGracePeriod(int minutes)

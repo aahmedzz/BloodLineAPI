@@ -29,9 +29,9 @@ public class HealthPreScreening : AuditableEntity
         bool hasRecentTattooOrPiercingInPast6Months,
         bool hasDentalProcedureInPastWeek,
         bool hasCurrentFeverInfectionOrSevereCold,
-        bool hasChronicIllnessAffectingBloodDonation)
+        bool hasChronicIllnessAffectingBloodDonation,
+        DateTime currentLocalTime)
     {
-        var now = DateTime.UtcNow;
         var screening = new HealthPreScreening
         {
             Id = Guid.NewGuid(),
@@ -44,7 +44,7 @@ public class HealthPreScreening : AuditableEntity
             HasDentalProcedureInPastWeek = hasDentalProcedureInPastWeek,
             HasCurrentFeverInfectionOrSevereCold = hasCurrentFeverInfectionOrSevereCold,
             HasChronicIllnessAffectingBloodDonation = hasChronicIllnessAffectingBloodDonation,
-            ScreenedAt = now
+            ScreenedAt = currentLocalTime
         };
 
         screening.IsEligible = screening.EvaluateEligibility();

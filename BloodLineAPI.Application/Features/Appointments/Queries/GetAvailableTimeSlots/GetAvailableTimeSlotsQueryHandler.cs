@@ -6,7 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BloodLineAPI.Application.Features.Appointments.Queries.GetAvailableTimeSlots;
 
-public sealed class GetAvailableTimeSlotsQueryHandler(IApplicationDbContext dbContext)
+public sealed class GetAvailableTimeSlotsQueryHandler(
+    IApplicationDbContext dbContext,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<GetAvailableTimeSlotsQuery, IReadOnlyList<TimeSlotDto>>
 {
     public async Task<IReadOnlyList<TimeSlotDto>> Handle(GetAvailableTimeSlotsQuery request, CancellationToken cancellationToken)
@@ -17,7 +19,7 @@ public sealed class GetAvailableTimeSlotsQueryHandler(IApplicationDbContext dbCo
             .FirstOrDefaultAsync(c => c.Id == request.DonationCenterId, cancellationToken)
             ?? throw new NotFoundException("DonationCenter", request.DonationCenterId);
 
-        if (!center.IsOperatingOn(request.Date))
+        if (DateOnly.FromDateTime(request.Date) < dateTimeProvider.CurrentLocalDate || !center.IsOperatingOn(request.Date))
         {
             return [];
         }
@@ -28,6 +30,11 @@ public sealed class GetAvailableTimeSlotsQueryHandler(IApplicationDbContext dbCo
             return [];
         }
 
+        var nowTime = dateTimeProvider.CurrentLocalTimeOfDay;
+        var availableSlots = DateOnly.FromDateTime(request.Date) == dateTimeProvider.CurrentLocalDate
+            ? slots.Where(s => s.Start >= nowTime).ToList()
+            : slots.ToList();
+
         var bookedSlots = await dbContext.DonationAppointments
             .Where(a => a.DonationCenterId == request.DonationCenterId)
             .Where(a => a.ScheduledDate == request.Date.Date)
@@ -36,7 +43,7 @@ public sealed class GetAvailableTimeSlotsQueryHandler(IApplicationDbContext dbCo
             .Select(g => new { StartTime = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.StartTime, x => x.Count, cancellationToken);
 
-        return slots.Select(s =>
+        return availableSlots.Select(s =>
         {
             var booked = bookedSlots.GetValueOrDefault(s.Start, 0);
             var available = Math.Max(0, s.MaxPerSlot - booked);

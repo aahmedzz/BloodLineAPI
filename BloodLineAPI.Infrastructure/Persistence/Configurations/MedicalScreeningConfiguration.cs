@@ -27,5 +27,11 @@ public class MedicalScreeningConfiguration : IEntityTypeConfiguration<MedicalScr
             .WithMany(s => s.MedicalScreenings)
             .HasForeignKey(ms => ms.PerformedByStaffId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(ms => ms.DonationAppointment)
+            .WithMany()
+            .HasForeignKey(ms => ms.DonationAppointmentId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
     }
 }

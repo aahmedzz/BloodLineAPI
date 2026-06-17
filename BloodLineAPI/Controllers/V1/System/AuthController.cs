@@ -39,7 +39,7 @@ public class AuthController(ISender sender) : ControllerBase
         var data = result.Data!;
 
         SetTokenCookies(data.Token, data.RefreshToken);
-        
+
         // Return only user info in JSON body
         return Ok(ApiResponse<AuthenticatedStaffUser>.Ok(data.User));
     }
@@ -83,7 +83,6 @@ public class AuthController(ISender sender) : ControllerBase
         var result = await sender.Send(command, ct);
         if (!result.IsSuccess)
         {
-            ClearTokenCookies();
             return Unauthorized(ApiResponse<object>.Fail(result.Error!));
         }
 
@@ -129,24 +128,34 @@ public class AuthController(ISender sender) : ControllerBase
         {
             HttpOnly = true,
             Secure = true, // Ensure we use HTTPS in production
-            SameSite = SameSiteMode.Strict,
-            Path = "/api", // Available to all API endpoints
-            Expires = DateTimeOffset.UtcNow.AddMinutes(60) 
+            SameSite = SameSiteMode.None,
+            Path = "/", // Available to all API endpoints
+            Expires = DateTimeOffset.UtcNow.AddDays(7) // Must outlive the JWT so the refresh endpoint can read the expired token
         });
 
         Response.Cookies.Append(RefreshTokenCookie, refreshToken, new CookieOptions
         {
             HttpOnly = true,
             Secure = true, // Ensure we use HTTPS in production
-            SameSite = SameSiteMode.Strict,
-            Path = "/api/v1/system/auth", // Restricted exclusively to the auth controller
+            SameSite = SameSiteMode.None,
+            Path = "/", // Available to all API endpoints
             Expires = DateTimeOffset.UtcNow.AddDays(7)
         });
     }
 
     private void ClearTokenCookies()
     {
-        Response.Cookies.Delete(AccessTokenCookie, new CookieOptions { Path = "/api" });
-        Response.Cookies.Delete(RefreshTokenCookie, new CookieOptions { Path = "/api/v1/system/auth" });
+        Response.Cookies.Delete(AccessTokenCookie, new CookieOptions
+        {
+            Path = "/",
+            SameSite = SameSiteMode.None,
+            Secure = true
+        });
+        Response.Cookies.Delete(RefreshTokenCookie, new CookieOptions
+        {
+            Path = "/",
+            SameSite = SameSiteMode.None,
+            Secure = true
+        });
     }
 }

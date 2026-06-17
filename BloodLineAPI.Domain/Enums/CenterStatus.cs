@@ -5,5 +5,7 @@ public enum CenterStatus
     Active,
     Ended,
     UnderMaintenance,
-    TemporarilyClosed
+    TemporarilyClosed,
+    NotActive,
+    Completed
 }

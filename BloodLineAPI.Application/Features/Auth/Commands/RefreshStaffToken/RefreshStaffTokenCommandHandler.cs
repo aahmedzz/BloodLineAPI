@@ -12,7 +12,7 @@ namespace BloodLineAPI.Application.Features.Auth.Commands.RefreshStaffToken;
 public sealed class RefreshStaffTokenCommandHandler(
     UserManager<User> userManager,
     IApplicationDbContext dbContext,
-    IJwtGenerator jwtGenerator) 
+    IJwtGenerator jwtGenerator)
     : IRequestHandler<RefreshStaffTokenCommand, Result<StaffAuthResponse>>
 {
     public async Task<Result<StaffAuthResponse>> Handle(RefreshStaffTokenCommand request, CancellationToken cancellationToken)
@@ -34,7 +34,7 @@ public sealed class RefreshStaffTokenCommandHandler(
         var staff = await dbContext.Staff.FirstOrDefaultAsync(s => s.Id == user.Id, cancellationToken);
         if (staff == null || !staff.IsActiveEmployee)
         {
-             return Result<StaffAuthResponse>.Failure("User is not authorized as staff or account is inactive.");
+            return Result<StaffAuthResponse>.Failure("User is not authorized as staff or account is inactive.");
         }
 
         var roles = await userManager.GetRolesAsync(user);

@@ -180,7 +180,7 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<byte>("BloodTypeId")
+                    b.Property<byte?>("BloodTypeId")
                         .HasColumnType("tinyint");
 
                     b.Property<Guid>("CollectedByStaffId")
@@ -624,6 +624,9 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<TimeSpan?>("CheckInTime")
+                        .HasColumnType("time");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -632,6 +635,24 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
                     b.Property<Guid>("DonationCenterId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DonationCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasComputedColumnSql("'DTN-' + CAST(YEAR([CreatedAt]) AS VARCHAR(4)) + '-' + CASE WHEN [DonationNumber] < 10000 THEN RIGHT('0000' + CAST([DonationNumber] AS VARCHAR(10)), 4) ELSE CAST([DonationNumber] AS VARCHAR(10)) END", false);
+
+                    b.Property<int>("DonationNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DonationNumber"));
+
+                    b.Property<string>("DonationStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("DonationType")
                         .IsRequired()
@@ -653,6 +674,9 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("MedicalScreeningId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -661,6 +685,11 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
                     b.Property<DateTime>("ScheduledDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("SentToLab")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -678,6 +707,9 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DonationCenterId");
+
+                    b.HasIndex("DonationCode")
+                        .IsUnique();
 
                     b.HasIndex("DonorId");
 
@@ -697,6 +729,17 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("CampaignCode")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("nvarchar(max)")
+                        .HasComputedColumnSql("'CAM-' + RIGHT('000' + CAST(CampaignNumber AS VARCHAR(10)), 3)", true);
+
+                    b.Property<int>("CampaignNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CampaignNumber"));
+
                     b.Property<string>("CenterType")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -707,6 +750,13 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CreatedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("DescriptionText")
                         .HasColumnType("nvarchar(max)");
@@ -742,6 +792,26 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<bool>("RecurrenceEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("RecurrenceEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("RecurrenceGroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RecurrenceType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("RecurrenceWeekDays")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ScheduledJobIds")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("SlotDurationMinutes")
                         .HasColumnType("int");
 
@@ -761,6 +831,9 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<int?>("TargetDonors")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.ToTable("DonationCenters");
@@ -770,6 +843,7 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         {
                             Id = new Guid("b5b4d5b7-eaf8-4a92-8b0a-2fc73f6cc3d1"),
                             AddressDetails = "Beni Suef Main Branch",
+                            CampaignNumber = 0,
                             CenterType = "MainBranch",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             DescriptionText = "Main branch in Beni Suef.",
@@ -779,6 +853,7 @@ namespace BloodLineAPI.Infrastructure.Migrations
                             Longitude = 31.118414000000001,
                             MaxDonorsPerSlot = 10,
                             Name = "Beni Suef Main Branch",
+                            RecurrenceEnabled = false,
                             SlotDurationMinutes = 15,
                             StartDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             StartTime = new TimeSpan(0, 7, 0, 0, 0),
@@ -1065,6 +1140,9 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Property<double?>("Latitude")
                         .HasColumnType("float");
 
+                    b.Property<DateTime?>("LockoutUntil")
+                        .HasColumnType("datetime2");
+
                     b.Property<double?>("Longitude")
                         .HasColumnType("float");
 
@@ -1087,6 +1165,13 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Eligible");
 
                     b.Property<string>("ThirdName")
                         .IsRequired()
@@ -1207,6 +1292,9 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
+                    b.Property<Guid?>("DonationAppointmentId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("DonorId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1259,6 +1347,8 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasColumnType("decimal(5,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DonationAppointmentId");
 
                     b.HasIndex("DonorId");
 
@@ -1757,8 +1847,7 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.HasOne("BloodLineAPI.Domain.Entities.BloodEntities.BloodType", "BloodType")
                         .WithMany("BloodBags")
                         .HasForeignKey("BloodTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("BloodLineAPI.Domain.Entities.Staff", "CollectedByStaff")
                         .WithMany("CollectedBloodBags")
@@ -2013,6 +2102,11 @@ namespace BloodLineAPI.Infrastructure.Migrations
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.MedicalScreening", b =>
                 {
+                    b.HasOne("BloodLineAPI.Domain.Entities.DonationEntities.DonationAppointment", "DonationAppointment")
+                        .WithMany()
+                        .HasForeignKey("DonationAppointmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("BloodLineAPI.Domain.Entities.Donor", "Donor")
                         .WithMany("MedicalScreenings")
                         .HasForeignKey("DonorId")
@@ -2024,6 +2118,8 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasForeignKey("PerformedByStaffId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("DonationAppointment");
 
                     b.Navigation("Donor");
 

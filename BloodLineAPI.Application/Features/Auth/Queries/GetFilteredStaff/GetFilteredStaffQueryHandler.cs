@@ -32,6 +32,7 @@ public sealed class GetFilteredStaffQueryHandler(IApplicationDbContext dbContext
                 s.SecondName.Contains(search) ||
                 s.ThirdName.Contains(search) ||
                 (s.FourthName != null && s.FourthName.Contains(search)) ||
+                (s.FirstName + " " + s.SecondName + " " + s.ThirdName + " " + (s.FourthName ?? "")).Contains(search) ||
                 (s.User.Email != null && s.User.Email.Contains(search)) ||
                 (s.PhoneNumber != null && s.PhoneNumber.Contains(search)));
         }

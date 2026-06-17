@@ -24,17 +24,20 @@ public class DonorProfilePlugin
     private readonly ILogger<DonorProfilePlugin> _logger;
     private readonly IMemoryCache _cache;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IDateTimeProvider _dateTimeProvider;
 
     public DonorProfilePlugin(
         IApplicationDbContext context,
         ILogger<DonorProfilePlugin> logger,
         IMemoryCache cache,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IDateTimeProvider dateTimeProvider)
     {
         _context = context;
         _logger = logger;
         _cache = cache;
         _httpContextAccessor = httpContextAccessor;
+        _dateTimeProvider = dateTimeProvider;
     }
 
     [KernelFunction, Description("Gets the current donor's blood type information and what it means for compatibility. Useful when the user asks 'what is my blood type?', 'who can I donate to?', or 'who can donate to me?'.")]
@@ -175,9 +178,9 @@ public class DonorProfilePlugin
                 var cooldownDays = donor.Gender == BloodLineAPI.Domain.Enums.Gender.Female ? 120 : 90;
                 var nextEligible = donor.LastDonationDate.Value.AddDays(cooldownDays);
 
-                if (nextEligible > DateTime.UtcNow)
+                if (nextEligible > _dateTimeProvider.LocalNow)
                 {
-                    var daysLeft = (nextEligible - DateTime.UtcNow).Days;
+                    var daysLeft = (nextEligible - _dateTimeProvider.LocalNow).Days;
                     sb.AppendLine($"Next Eligible Date: {nextEligible:yyyy-MM-dd} ({daysLeft} days remaining)");
                 }
                 else
@@ -253,10 +256,11 @@ public class DonorProfilePlugin
                 sb.AppendLine("  - You can contact the Monqez main branch for more information.");
             }
 
-            if (screening.LockoutUntil.HasValue && screening.LockoutUntil.Value > DateTime.UtcNow)
+            if (screening.LockoutUntil.HasValue && screening.LockoutUntil.Value > _dateTimeProvider.UtcNow)
             {
                 sb.AppendLine();
-                sb.AppendLine($"⚠️ You are temporarily locked out from donating until {screening.LockoutUntil.Value:yyyy-MM-dd}.");
+                var localLockoutUntil = _dateTimeProvider.ToLocalTime(screening.LockoutUntil.Value);
+                sb.AppendLine($"⚠️ You are temporarily locked out from donating until {localLockoutUntil:yyyy-MM-dd}.");
                 sb.AppendLine("This lockout was applied due to a failed medical screening. Please consult with a medical professional before your next attempt.");
             }
 
