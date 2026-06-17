@@ -32,7 +32,10 @@ public sealed class GetSamplesQueryHandler : IRequestHandler<GetSamplesQuery, Ge
                 bb.SerialNumber.Contains(s) ||
                 bb.Id.ToString().Contains(s) ||
                 (bb.DonationAppointment != null &&
-                 bb.DonationAppointment.Donor.FullName.Contains(s)));
+                 (bb.DonationAppointment.Donor.FirstName + " " +
+                  bb.DonationAppointment.Donor.SecondName + " " +
+                  bb.DonationAppointment.Donor.ThirdName + " " +
+                  (bb.DonationAppointment.Donor.FourthName ?? "")).Contains(s)));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Status))

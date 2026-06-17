@@ -5,6 +5,7 @@ public sealed record TestResultDto(
     Guid SampleId,
     string DonationCode,
     string DonorName,
+    string NationalId,
     string BloodType,
     string ConfirmedBloodType,
     string Hcv,

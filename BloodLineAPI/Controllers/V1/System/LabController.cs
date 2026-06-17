@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Application.Features.Lab.Commands.SubmitLabTestResult;
+using BloodLineAPI.Application.Features.Lab.Queries.GetLabDashboardStats;
 using BloodLineAPI.Application.Features.Lab.Queries.GetLabTestById;
 using BloodLineAPI.Application.Features.Lab.Queries.GetLabTests;
 using BloodLineAPI.Application.Features.Lab.Queries.GetResults;
@@ -17,7 +18,7 @@ namespace BloodLineAPI.Controllers.V1.System;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/lab")]
 [ApiAudience(Audience.System)]
-[Authorize(Roles = "Lab")]
+[Authorize(Policy = "Lab")]
 [Produces("application/json")]
 public class LabController(ISender sender) : ControllerBase
 {
@@ -135,6 +136,14 @@ public class LabController(ISender sender) : ControllerBase
     {
         var result = await sender.Send(new GetResultsQuery(page, limit, search, bloodType, outcome), cancellationToken);
         return Ok(ApiResponse<GetResultsResult>.Ok(result));
+    }
+
+    [HttpGet("dashboard/stats")]
+    [ProducesResponseType(typeof(ApiResponse<GetLabDashboardStatsResult>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDashboardStats(CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new GetLabDashboardStatsQuery(), cancellationToken);
+        return Ok(ApiResponse<GetLabDashboardStatsResult>.Ok(result, "Dashboard statistics retrieved successfully"));
     }
 }
 

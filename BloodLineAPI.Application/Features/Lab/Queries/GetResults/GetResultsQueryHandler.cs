@@ -31,7 +31,10 @@ public sealed class GetResultsQueryHandler : IRequestHandler<GetResultsQuery, Ge
             query = query.Where(r =>
                 r.BloodBag.SerialNumber.Contains(s) ||
                 (r.BloodBag.DonationAppointment != null &&
-                 r.BloodBag.DonationAppointment.Donor.FullName.Contains(s)));
+                 (r.BloodBag.DonationAppointment.Donor.FirstName + " " +
+                  r.BloodBag.DonationAppointment.Donor.SecondName + " " +
+                  r.BloodBag.DonationAppointment.Donor.ThirdName + " " +
+                  (r.BloodBag.DonationAppointment.Donor.FourthName ?? "")).Contains(s)));
         }
 
         if (!string.IsNullOrWhiteSpace(request.BloodType))
@@ -65,6 +68,7 @@ public sealed class GetResultsQueryHandler : IRequestHandler<GetResultsQuery, Ge
         var items = raw.Select(r =>
         {
             var donorName = r.BloodBag.DonationAppointment?.Donor.FullName ?? string.Empty;
+            var nationalId = r.BloodBag.DonationAppointment?.Donor.NationalId ?? string.Empty;
 
             var bagBt = r.BloodBag.BloodType != null
                 ? r.BloodBag.BloodType.BloodGroupName.ToString() +
@@ -86,6 +90,7 @@ public sealed class GetResultsQueryHandler : IRequestHandler<GetResultsQuery, Ge
                 r.BloodBagId,
                 r.BloodBag.SerialNumber,
                 donorName,
+                nationalId,
                 !string.IsNullOrEmpty(bagBt) ? bagBt : donorBt,
                 confirmedBt,
                 r.HepatitisCResult ?? string.Empty,

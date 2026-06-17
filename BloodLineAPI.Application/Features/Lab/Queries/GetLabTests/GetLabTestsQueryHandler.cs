@@ -42,7 +42,7 @@ public sealed class GetLabTestsQueryHandler : IRequestHandler<GetLabTestsQuery, 
         {
             var s = request.Search.Trim();
             query = query.Where(d =>
-                d.Donor.FullName.Contains(s) ||
+                (d.Donor.FirstName + " " + d.Donor.SecondName + " " + d.Donor.ThirdName + " " + (d.Donor.FourthName ?? "")).Contains(s) ||
                 d.BloodBag!.SerialNumber.Contains(s));
         }
 
