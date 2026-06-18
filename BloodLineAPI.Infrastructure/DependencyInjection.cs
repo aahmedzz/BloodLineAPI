@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddSingleton<IDateTimeProvider, Services.DateTimeProvider>();
         services.AddScoped<IJwtGenerator, JwtGenerator>();
         services.AddScoped<IRegistrationOtpService, RegistrationOtpService>();
+        services.AddScoped<IPdfGenerator, Services.PdfGenerator>();
 
         var firebaseSection = configuration.GetSection(FirebaseOptions.SectionName);
         if (firebaseSection.Exists() && !string.IsNullOrWhiteSpace(firebaseSection["ServiceAccountKeyPath"]))

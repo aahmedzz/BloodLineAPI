@@ -5,5 +5,7 @@ public sealed record GetBloodBagStatsResult(
     int ExpiredCount,
     int IssuedCount,
     int DisposedCount,
-    int TestingCount
+    int TestingCount,
+    int ExpiringSoonCount,
+    int WastePercentage
 );

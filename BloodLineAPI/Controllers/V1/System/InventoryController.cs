@@ -4,17 +4,23 @@ using BloodLineAPI.Application.Features.Inventory.Commands.DisposeBloodBags;
 using BloodLineAPI.Application.Features.Inventory.Commands.IssueBloodBags;
 using BloodLineAPI.Application.Features.Inventory.Queries.GetBloodBags;
 using BloodLineAPI.Application.Features.Inventory.Queries.GetBloodBagStats;
+using BloodLineAPI.Application.Features.Inventory.Queries.GetOutflowHistory;
+using BloodLineAPI.Application.Features.Inventory.Queries.GetOutflowDetail;
+using BloodLineAPI.Application.Features.Inventory.Queries.ExportOutflowPdf;
 using BloodLineAPI.Attributes;
 using BloodLineAPI.Controllers.V1.System.Requests;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BloodLineAPI.Controllers.V1.System;
 
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/system/inventory/blood-bags")]
+[Route("api/v{version:apiVersion}/system/inventory")]
 [ApiAudience(Audience.System)]
 [Authorize(Policy = "InventoryManager")]
 [Produces("application/json")]
@@ -24,7 +30,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Lists blood bags with pagination, filtering, and sorting.
     /// Defaults to showing available and expired bags if no status filter is provided.
     /// </summary>
-    [HttpGet]
+    [HttpGet("blood-bags")]
     [ProducesResponseType(typeof(ApiResponse<GetBloodBagsResult>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetBloodBags(
         [FromQuery] int page = 1,
@@ -48,7 +54,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// <summary>
     /// Retrieves aggregate counts grouped by status for dashboard display cards.
     /// </summary>
-    [HttpGet("stats")]
+    [HttpGet("blood-bags/stats")]
     [ProducesResponseType(typeof(ApiResponse<GetBloodBagStatsResult>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetStats(CancellationToken cancellationToken)
     {
@@ -60,7 +66,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Issues multiple available blood bags to a patient or hospital.
     /// Processes each bag individually; returns partial success results.
     /// </summary>
-    [HttpPost("issue")]
+    [HttpPost("blood-bags/issue")]
     [ProducesResponseType(typeof(ApiResponse<IssueBloodBagsResult>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
@@ -91,7 +97,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Disposes of multiple blood bags due to contamination, damage, preparation issues, or expiry.
     /// Processes each bag individually; returns partial success results.
     /// </summary>
-    [HttpPost("dispose")]
+    [HttpPost("blood-bags/dispose")]
     [ProducesResponseType(typeof(ApiResponse<DisposeBloodBagsResult>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
@@ -118,5 +124,64 @@ public class InventoryController(ISender sender) : ControllerBase
         {
             return Unauthorized(ApiResponse.Fail(ex.Message));
         }
+    }
+
+    /// <summary>
+    /// Retrieves a paginated list of inventory outflow history (issued and disposed actions).
+    /// </summary>
+    [HttpGet("outflow")]
+    [ProducesResponseType(typeof(ApiResponse<GetOutflowHistoryResult>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetOutflowHistory(
+        [FromQuery] int page = 1,
+        [FromQuery] int limit = 10,
+        [FromQuery] string? search = null,
+        [FromQuery] string? actionType = null,
+        [FromQuery] string? bloodType = null,
+        [FromQuery] string? performedById = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new GetOutflowHistoryQuery(page, limit, search, actionType, bloodType, performedById);
+        var result = await sender.Send(query, cancellationToken);
+        return Ok(ApiResponse<GetOutflowHistoryResult>.Ok(result, "تم استرجاع سجل الحركة بنجاح"));
+    }
+
+    /// <summary>
+    /// Retrieves full details of a single outflow record (either issued or disposed).
+    /// </summary>
+    [HttpGet("outflow/{id:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<GetOutflowDetailResult>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetOutflowDetail(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await sender.Send(new GetOutflowDetailQuery(id), cancellationToken);
+
+        if (result == null)
+        {
+            return NotFound(ApiResponse.Fail("السجل المطلوب غير موجود"));
+        }
+
+        return Ok(ApiResponse<GetOutflowDetailResult>.Ok(result, "تم استرجاع تفاصيل الحركة بنجاح"));
+    }
+
+    /// <summary>
+    /// Exports the filtered outflow history as a formatted PDF report.
+    /// </summary>
+    [HttpGet("outflow/export")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ExportReport(
+        [FromQuery] string? search = null,
+        [FromQuery] string? actionType = null,
+        [FromQuery] string? bloodType = null,
+        [FromQuery] string? performedById = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new ExportOutflowPdfQuery(search, actionType, bloodType, performedById);
+        var pdfBytes = await sender.Send(query, cancellationToken);
+
+        var filename = $"outflow_report_{DateTime.UtcNow:yyyy-MM-dd}.pdf";
+        return File(pdfBytes, "application/pdf", filename);
     }
 }
