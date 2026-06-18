@@ -5,6 +5,7 @@ public class BloodBagExpirySettings
     public int WholeBloodDays { get; set; } = 42;
     public int PlasmaDays { get; set; } = 365;
     public int PlateletsDays { get; set; } = 5;
+    public int WarningWindowDays { get; set; } = 5;
 
     public int GetExpiryDays(DonationType type) => type switch
     {

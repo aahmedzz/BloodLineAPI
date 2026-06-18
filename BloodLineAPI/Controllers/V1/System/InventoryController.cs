@@ -2,17 +2,22 @@ using Asp.Versioning;
 using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Application.Features.Inventory.Commands.DisposeBloodBags;
 using BloodLineAPI.Application.Features.Inventory.Commands.IssueBloodBags;
+using BloodLineAPI.Application.Features.Inventory.Commands.UpdateInventoryThresholds;
 using BloodLineAPI.Application.Features.Inventory.Queries.GetBloodBags;
 using BloodLineAPI.Application.Features.Inventory.Queries.GetBloodBagStats;
 using BloodLineAPI.Application.Features.Inventory.Queries.GetOutflowHistory;
 using BloodLineAPI.Application.Features.Inventory.Queries.GetOutflowDetail;
 using BloodLineAPI.Application.Features.Inventory.Queries.ExportOutflowPdf;
+using BloodLineAPI.Application.Features.Inventory.Queries.GetInventoryAnalytics;
+using BloodLineAPI.Application.Features.Inventory.Queries.GetInventoryThresholds;
+using BloodLineAPI.Application.Features.Inventory.Queries.GetInventoryDashboard;
 using BloodLineAPI.Attributes;
 using BloodLineAPI.Controllers.V1.System.Requests;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -60,6 +65,54 @@ public class InventoryController(ISender sender) : ControllerBase
     {
         var result = await sender.Send(new GetBloodBagStatsQuery(), cancellationToken);
         return Ok(ApiResponse<GetBloodBagStatsResult>.Ok(result, "تم تحميل الإحصائيات بنجاح"));
+    }
+
+    /// <summary>
+    /// Fetches all computed statistics, alerts, stock levels, indicators, and recent activities for the Inventory Dashboard.
+    /// </summary>
+    [HttpGet("dashboard")]
+    [ProducesResponseType(typeof(ApiResponse<GetInventoryDashboardResult>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDashboard(CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new GetInventoryDashboardQuery(), cancellationToken);
+        return Ok(ApiResponse<GetInventoryDashboardResult>.Ok(result, "تم تحميل بيانات لوحة المخزون بنجاح"));
+    }
+
+    /// <summary>
+    /// Fetches all computed statistics, chart data, alerts, and table records for the Inventory Analytics page.
+    /// </summary>
+    [HttpGet("analytics")]
+    [ProducesResponseType(typeof(ApiResponse<GetInventoryAnalyticsResult>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAnalytics(CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new GetInventoryAnalyticsQuery(), cancellationToken);
+        return Ok(ApiResponse<GetInventoryAnalyticsResult>.Ok(result, "تم تحميل تحليلات المخزون بنجاح"));
+    }
+
+    /// <summary>
+    /// Fetch the safety minimum stock levels required for each blood type.
+    /// </summary>
+    [HttpGet("thresholds")]
+    [ProducesResponseType(typeof(ApiResponse<Dictionary<string, int>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetThresholds(CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new GetInventoryThresholdsQuery(), cancellationToken);
+        return Ok(ApiResponse<Dictionary<string, int>>.Ok(result, "تم استرجاع الحد الأدنى للمخزون بنجاح"));
+    }
+
+    /// <summary>
+    /// Update the safety minimum stock levels required for each blood type.
+    /// </summary>
+    [HttpPut("thresholds")]
+    [ProducesResponseType(typeof(ApiResponse<Dictionary<string, int>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> UpdateThresholds(
+        [FromBody] UpdateInventoryThresholdsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var cmd = new UpdateInventoryThresholdsCommand(request.Thresholds);
+        var result = await sender.Send(cmd, cancellationToken);
+        return Ok(ApiResponse<Dictionary<string, int>>.Ok(result, "تم تحديث الحد الأدنى للمخزون بنجاح"));
     }
 
     /// <summary>

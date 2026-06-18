@@ -1,7 +1,9 @@
 using BloodLineAPI.Application.Common.Interfaces;
+using BloodLineAPI.Domain.Common;
 using BloodLineAPI.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BloodLineAPI.Application.Features.Inventory.Queries.GetBloodBagStats;
 
@@ -9,11 +11,16 @@ public sealed class GetBloodBagStatsQueryHandler : IRequestHandler<GetBloodBagSt
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IOptions<BloodBagExpirySettings> _expirySettings;
 
-    public GetBloodBagStatsQueryHandler(IApplicationDbContext dbContext, IDateTimeProvider dateTimeProvider)
+    public GetBloodBagStatsQueryHandler(
+        IApplicationDbContext dbContext,
+        IDateTimeProvider dateTimeProvider,
+        IOptions<BloodBagExpirySettings> expirySettings)
     {
         _dbContext = dbContext;
         _dateTimeProvider = dateTimeProvider;
+        _expirySettings = expirySettings;
     }
 
     public async Task<GetBloodBagStatsResult> Handle(GetBloodBagStatsQuery request, CancellationToken cancellationToken)
@@ -25,7 +32,8 @@ public sealed class GetBloodBagStatsQueryHandler : IRequestHandler<GetBloodBagSt
             .ToListAsync(cancellationToken);
 
         var today = _dateTimeProvider.CurrentLocalDate.ToDateTime(TimeOnly.MinValue);
-        var expiringSoonThreshold = today.AddDays(7);
+        var warningWindowDays = _expirySettings.Value.WarningWindowDays;
+        var expiringSoonThreshold = today.AddDays(warningWindowDays);
 
         var expiringSoonCount = await _dbContext.BloodBags
             .AsNoTracking()
