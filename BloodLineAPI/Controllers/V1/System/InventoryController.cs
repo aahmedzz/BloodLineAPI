@@ -11,6 +11,7 @@ using BloodLineAPI.Application.Features.Inventory.Queries.ExportOutflowPdf;
 using BloodLineAPI.Application.Features.Inventory.Queries.GetInventoryAnalytics;
 using BloodLineAPI.Application.Features.Inventory.Queries.GetInventoryThresholds;
 using BloodLineAPI.Application.Features.Inventory.Queries.GetInventoryDashboard;
+using BloodLineAPI.Application.Features.Inventory.Queries.GetAdminInventoryDashboard;
 using BloodLineAPI.Attributes;
 using BloodLineAPI.Controllers.V1.System.Requests;
 using MediatR;
@@ -27,7 +28,6 @@ namespace BloodLineAPI.Controllers.V1.System;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/system/inventory")]
 [ApiAudience(Audience.System)]
-[Authorize(Policy = "InventoryManager")]
 [Produces("application/json")]
 public class InventoryController(ISender sender) : ControllerBase
 {
@@ -36,6 +36,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Defaults to showing available and expired bags if no status filter is provided.
     /// </summary>
     [HttpGet("blood-bags")]
+    [Authorize(Policy = "InventoryManager")]
     [ProducesResponseType(typeof(ApiResponse<GetBloodBagsResult>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetBloodBags(
         [FromQuery] int page = 1,
@@ -60,6 +61,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Retrieves aggregate counts grouped by status for dashboard display cards.
     /// </summary>
     [HttpGet("blood-bags/stats")]
+    [Authorize(Policy = "InventoryManager")]
     [ProducesResponseType(typeof(ApiResponse<GetBloodBagStatsResult>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetStats(CancellationToken cancellationToken)
     {
@@ -71,6 +73,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Fetches all computed statistics, alerts, stock levels, indicators, and recent activities for the Inventory Dashboard.
     /// </summary>
     [HttpGet("dashboard")]
+    [Authorize(Policy = "InventoryManager")]
     [ProducesResponseType(typeof(ApiResponse<GetInventoryDashboardResult>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDashboard(CancellationToken cancellationToken)
     {
@@ -82,6 +85,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Fetches all computed statistics, chart data, alerts, and table records for the Inventory Analytics page.
     /// </summary>
     [HttpGet("analytics")]
+    [Authorize(Policy = "InventoryManager")]
     [ProducesResponseType(typeof(ApiResponse<GetInventoryAnalyticsResult>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAnalytics(CancellationToken cancellationToken)
     {
@@ -93,6 +97,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Fetch the safety minimum stock levels required for each blood type.
     /// </summary>
     [HttpGet("thresholds")]
+    [Authorize(Policy = "InventoryManager")]
     [ProducesResponseType(typeof(ApiResponse<Dictionary<string, int>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetThresholds(CancellationToken cancellationToken)
     {
@@ -104,6 +109,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Update the safety minimum stock levels required for each blood type.
     /// </summary>
     [HttpPut("thresholds")]
+    [Authorize(Policy = "InventoryManager")]
     [ProducesResponseType(typeof(ApiResponse<Dictionary<string, int>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> UpdateThresholds(
@@ -120,6 +126,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Processes each bag individually; returns partial success results.
     /// </summary>
     [HttpPost("blood-bags/issue")]
+    [Authorize(Policy = "InventoryManager")]
     [ProducesResponseType(typeof(ApiResponse<IssueBloodBagsResult>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
@@ -151,6 +158,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Processes each bag individually; returns partial success results.
     /// </summary>
     [HttpPost("blood-bags/dispose")]
+    [Authorize(Policy = "InventoryManager")]
     [ProducesResponseType(typeof(ApiResponse<DisposeBloodBagsResult>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
@@ -183,6 +191,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Retrieves a paginated list of inventory outflow history (issued and disposed actions).
     /// </summary>
     [HttpGet("outflow")]
+    [Authorize(Policy = "InventoryManager")]
     [ProducesResponseType(typeof(ApiResponse<GetOutflowHistoryResult>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetOutflowHistory(
         [FromQuery] int page = 1,
@@ -202,6 +211,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Retrieves full details of a single outflow record (either issued or disposed).
     /// </summary>
     [HttpGet("outflow/{id:guid}")]
+    [Authorize(Policy = "InventoryManager")]
     [ProducesResponseType(typeof(ApiResponse<GetOutflowDetailResult>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetOutflowDetail(
@@ -222,6 +232,7 @@ public class InventoryController(ISender sender) : ControllerBase
     /// Exports the filtered outflow history as a formatted PDF report.
     /// </summary>
     [HttpGet("outflow/export")]
+    [Authorize(Policy = "InventoryManager")]
     [Produces("application/pdf")]
     [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
     public async Task<IActionResult> ExportReport(
@@ -236,5 +247,21 @@ public class InventoryController(ISender sender) : ControllerBase
 
         var filename = $"outflow_report_{DateTime.UtcNow:yyyy-MM-dd}.pdf";
         return File(pdfBytes, "application/pdf", filename);
+    }
+
+    /// <summary>
+    /// Retrieves the blood inventory overview data for the Admin Dashboard.
+    /// Includes total metrics, per-blood-type inventory sorted stably, and active critical/low alerts.
+    /// </summary>
+    [HttpGet("~/api/v{version:apiVersion}/system/admin/inventory/dashboard")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<GetAdminInventoryDashboardResult>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAdminDashboard(CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new GetAdminInventoryDashboardQuery(), cancellationToken);
+        return Ok(ApiResponse<GetAdminInventoryDashboardResult>.Ok(result, "تم تحميل بيانات مخزون الدم بنجاح"));
     }
 }

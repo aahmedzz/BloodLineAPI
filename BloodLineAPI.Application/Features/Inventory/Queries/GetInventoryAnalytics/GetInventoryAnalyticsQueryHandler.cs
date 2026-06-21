@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BloodLineAPI.Application.Common.Interfaces;
 using BloodLineAPI.Domain.Common;
+using BloodLineAPI.Domain.Entities;
 using BloodLineAPI.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -17,18 +18,6 @@ public sealed class GetInventoryAnalyticsQueryHandler : IRequestHandler<GetInven
     private readonly IApplicationDbContext _dbContext;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IOptions<BloodBagExpirySettings> _expirySettings;
-
-    private static readonly Dictionary<byte, (int Low, int Critical)> DefaultThresholds = new()
-    {
-        { 1, (10, 5) },  // A+
-        { 2, (8, 4) },   // A-
-        { 3, (12, 6) },  // B+
-        { 4, (10, 5) },  // B-
-        { 5, (5, 2) },   // AB+
-        { 6, (5, 2) },   // AB-
-        { 7, (15, 7) },  // O+
-        { 8, (10, 5) }   // O-
-    };
 
     public GetInventoryAnalyticsQueryHandler(
         IApplicationDbContext dbContext,
@@ -77,7 +66,7 @@ public sealed class GetInventoryAnalyticsQueryHandler : IRequestHandler<GetInven
             {
                 return threshold;
             }
-            return DefaultThresholds.TryGetValue(typeId, out var def) ? def : (10, 5);
+            return BloodStockThreshold.DefaultThresholds.TryGetValue(typeId, out var def) ? def : (10, 5);
         }
 
         // Fetch counts by blood type

@@ -4,6 +4,7 @@ using BloodLineAPI.Application.Features.Auth.Commands.CreateStaffAccount;
 using BloodLineAPI.Application.Features.Auth.Commands.UpdateStaffAccount;
 using BloodLineAPI.Application.Features.Auth.Commands.DeleteStaff;
 using BloodLineAPI.Application.Features.Auth.Queries.GetFilteredStaff;
+using BloodLineAPI.Application.Features.Dashboard.Queries.GetAdminDashboard;
 using BloodLineAPI.Attributes;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -105,6 +106,21 @@ public class StaffController(ISender sender) : ControllerBase
         }
 
         return Ok(ApiResponse<object>.Ok(null!, message: "Staff deleted successfully"));
+    }
+
+    /// <summary>
+    /// Retrieves the unified dashboard overview data for the Admin Dashboard.
+    /// Includes summary statistics, blood inventory status, donation trends, notifications, and recent donors in a single response.
+    /// </summary>
+    [HttpGet("~/api/v{version:apiVersion}/system/admin/dashboard")]
+    [ProducesResponseType(typeof(ApiResponse<GetAdminDashboardResult>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAdminDashboard(CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new GetAdminDashboardQuery(), cancellationToken);
+        return Ok(ApiResponse<GetAdminDashboardResult>.Ok(result, "تم تحميل بيانات لوحة التحكم بنجاح"));
     }
 }
 
