@@ -74,6 +74,7 @@ app.UseSwaggerUI(options =>
 //}
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseCors("WebDashboard");
 
 app.UseAuthentication();

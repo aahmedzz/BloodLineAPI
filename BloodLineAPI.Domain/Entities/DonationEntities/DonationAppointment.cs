@@ -225,6 +225,12 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
             Status = AppointmentStatus.Confirmed;
         }
 
+        public void RealignSlot(TimeSpan startTime, TimeSpan endTime)
+        {
+            StartTime = startTime;
+            EndTime = endTime;
+        }
+
         public void AttachHealthPreScreening(Guid donorId, Guid screeningId)
         {
             if (DonorId != donorId)

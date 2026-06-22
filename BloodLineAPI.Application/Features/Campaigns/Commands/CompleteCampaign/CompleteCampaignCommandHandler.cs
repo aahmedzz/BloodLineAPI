@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BloodLineAPI.Application.Common.Exceptions;
@@ -20,7 +19,7 @@ namespace BloodLineAPI.Application.Features.Campaigns.Commands.CompleteCampaign;
 public sealed class CompleteCampaignCommandHandler(
     IApplicationDbContext dbContext,
     ICampaignScheduler campaignScheduler,
-    INotificationSender notificationSender,
+    INotificationService notificationService,
     IDateTimeProvider dateTimeProvider,
     ILogger<CompleteCampaignCommandHandler> logger)
     : IRequestHandler<CompleteCampaignCommand, Result<CampaignDto>>
@@ -55,14 +54,11 @@ public sealed class CompleteCampaignCommandHandler(
         // 3. Fetch all upcoming pending or confirmed appointments
         var now = dateTimeProvider.LocalNow;
         var appointmentsToCancel = await dbContext.DonationAppointments
-            .Include(a => a.Donor)
-                .ThenInclude(d => d.User)
             .Where(a => a.DonationCenterId == campaign.Id)
             .Where(a => a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed)
             .ToListAsync(cancellationToken);
 
-        var notifications = new List<Notification>();
-        var notificationTasks = new List<(Guid DonorId, string Title, string Message, Notification Notif)>();
+        var cancelledDonorIds = new List<(Guid DonorId, Guid AppointmentId)>();
 
         foreach (var appt in appointmentsToCancel)
         {
@@ -70,59 +66,33 @@ public sealed class CompleteCampaignCommandHandler(
             if (appointmentStart > now)
             {
                 appt.Cancel("تم إلغاء الموعد بسبب إنهاء الحملة", now, gracePeriodMinutes: 0);
-
-                var title = "إلغاء موعد التبرع";
-                var message = $"تم إلغاء موعدك في {campaign.Name} بسبب إنهاء حملة التبرع.";
-                var payload = JsonSerializer.Serialize(new Dictionary<string, string>
-                {
-                    ["targetEntity"] = "DonationAppointment",
-                    ["targetId"] = appt.Id.ToString()
-                });
-
-                var notification = new Notification
-                {
-                    UserId = appt.Donor.User.Id,
-                    Title = title,
-                    Message = message,
-                    Type = NotificationType.AppointmentCancelled,
-                    ActionPayload = payload,
-                    SentDate = dateTimeProvider.UtcNow,
-                    IsSent = false
-                };
-
-                notifications.Add(notification);
-                notificationTasks.Add((appt.DonorId, title, message, notification));
+                cancelledDonorIds.Add((appt.DonorId, appt.Id));
             }
-        }
-
-        if (notifications.Any())
-        {
-            dbContext.Notifications.AddRange(notifications);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        // 4. Send Push Notifications
-        foreach (var task in notificationTasks)
+        // 4. Send Push Notifications via NotificationService
+        foreach (var (donorId, appointmentId) in cancelledDonorIds)
         {
             try
             {
-                var sent = await notificationSender.SendAsync(task.DonorId, task.Title, task.Message, cancellationToken);
-                if (sent)
-                {
-                    task.Notif.IsSent = true;
-                    task.Notif.SentVia = "fcm";
-                }
+                await notificationService.SendNotificationAsync(
+                    donorId,
+                    "إلغاء موعد التبرع",
+                    $"تم إلغاء موعدك في {campaign.Name} بسبب إنهاء حملة التبرع.",
+                    NotificationType.AppointmentCancelled,
+                    new Dictionary<string, string>
+                    {
+                        ["targetEntity"] = "DonationAppointment",
+                        ["targetId"] = appointmentId.ToString()
+                    },
+                    cancellationToken);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Failed to send push notification to donor {DonorId} for cancelled appointment during manual early completion.", task.DonorId);
+                logger.LogError(ex, "Failed to send cancellation notification to donor {DonorId} during manual early campaign completion.", donorId);
             }
-        }
-
-        if (notificationTasks.Any(t => t.Notif.IsSent))
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
         }
 
         // 5. Fetch counts for mapping

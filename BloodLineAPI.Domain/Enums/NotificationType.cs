@@ -10,5 +10,6 @@ public enum NotificationType
     RateDonationCenter,
     DonationCompleted,
     UrgentBloodAppeal,
-    General
+    General,
+    AppointmentRescheduled
 }

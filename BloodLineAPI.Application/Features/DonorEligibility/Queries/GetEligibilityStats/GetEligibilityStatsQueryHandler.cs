@@ -16,7 +16,7 @@ namespace BloodLineAPI.Application.Features.DonorEligibility.Queries.GetEligibil
 
 public sealed class GetEligibilityStatsQueryHandler(
     IApplicationDbContext dbContext,
-    IOptions<DonationCooldownSettings> cooldownOptions,
+    IDynamicSettingsService dynamicSettingsService,
     IDateTimeProvider dateTimeProvider)
     : IRequestHandler<GetEligibilityStatsQuery, Result<EligibilityStatsDto>>
 {
@@ -24,8 +24,9 @@ public sealed class GetEligibilityStatsQueryHandler(
         GetEligibilityStatsQuery request,
         CancellationToken cancellationToken)
     {
-        var maleDays = cooldownOptions.Value.WholeBloodMaleDays;
-        var femaleDays = cooldownOptions.Value.WholeBloodFemaleDays;
+        var settings = await dynamicSettingsService.GetSettingsAsync(cancellationToken);
+        var maleDays = settings.WholeBloodMaleDays;
+        var femaleDays = settings.WholeBloodFemaleDays;
         var todayLocal = dateTimeProvider.LocalNow.Date;
 
         // Fetch a thin projection of all donors to compute stats efficiently in memory

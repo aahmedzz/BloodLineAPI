@@ -14,7 +14,7 @@ namespace BloodLineAPI.Application.Common.Services;
 
 public class EmergencyNotificationService(
     IApplicationDbContext dbContext,
-    INotificationSender notificationSender,
+    INotificationService notificationService,
     IDonorEligibilityService eligibilityService,
     IDateTimeProvider dateTimeProvider)
     : IEmergencyNotificationService
@@ -94,61 +94,27 @@ public class EmergencyNotificationService(
             ));
         }
 
-        // 4. Create Notification audit records in DB (batched insert)
+        // 4. Send notifications via NotificationService (handles DB audit + FCM dispatch)
         var title = "🚨 طلب تبرع دم عاجل";
-        var notificationsToInsert = eligibleDonorsToSend.Select(donor => new Notification
-        {
-            UserId = donor.Id,
-            Title = title,
-            Message = message,
-            Type = NotificationType.UrgentBloodAppeal,
-            ActionPayload = null,
-            SentDate = dateTimeProvider.UtcNow,
-            IsSent = false
-        }).ToList();
-
-        foreach (var notification in notificationsToInsert)
-        {
-            dbContext.Notifications.Add(notification);
-        }
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        // Map donors to their saved notifications
-        var donorNotificationPairs = eligibleDonorsToSend
-            .Zip(notificationsToInsert, (donor, notification) => new { Donor = donor, Notification = notification })
-            .ToList();
-
-        // 5. Concurrently dispatch push notifications (FCM network requests) in parallel
-        var sendTasks = donorNotificationPairs.Select(async pair =>
-        {
-            var sent = await notificationSender.SendAsync(
-                pair.Donor.Id,
-                pair.Notification.Title,
-                pair.Notification.Message,
-                cancellationToken);
-
-            return new { pair.Donor.Id, pair.Notification, Sent = sent };
-        });
-
-        var sendResults = await Task.WhenAll(sendTasks);
-
-        // 6. Update delivery statuses in DB (batched update)
         var sentCount = 0;
-        foreach (var result in sendResults)
+
+        foreach (var donor in eligibleDonorsToSend)
         {
-            if (result.Sent)
+            try
             {
-                result.Notification.IsSent = true;
-                result.Notification.SentVia = "fcm";
+                await notificationService.SendNotificationAsync(
+                    donor.Id,
+                    title,
+                    message,
+                    NotificationType.UrgentBloodAppeal,
+                    cancellationToken: cancellationToken);
                 sentCount++;
             }
-            else
+            catch
             {
-                failedDonorIds.Add(result.Id);
+                failedDonorIds.Add(donor.Id);
             }
         }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
 
         var resultDto = new SendBulkNotificationResultDto(
             Requested: requestedCount,

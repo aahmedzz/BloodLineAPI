@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BloodLineAPI.Infrastructure.Messaging;
 
-public class NoOpNotificationSender(ILogger<NoOpNotificationSender> logger) : INotificationSender
+public class NoOpNotificationSender(ILogger<NoOpNotificationSender> logger) : IPushNotificationDispatcher
 {
     public Task<bool> SendAsync(Guid donorId, string title, string message, CancellationToken ct = default)
     {

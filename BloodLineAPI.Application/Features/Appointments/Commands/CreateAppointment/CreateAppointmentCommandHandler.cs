@@ -14,7 +14,7 @@ namespace BloodLineAPI.Application.Features.Appointments.Commands.CreateAppointm
 
 public sealed class CreateAppointmentCommandHandler(
     IApplicationDbContext dbContext,
-    IOptions<DonationCooldownSettings> cooldownOptions,
+    IDynamicSettingsService dynamicSettingsService,
     IDonorEligibilityService eligibilityService,
     IDateTimeProvider dateTimeProvider)
     : IRequestHandler<CreateAppointmentCommand, Result<CreateAppointmentResultDto>>
@@ -101,6 +101,15 @@ public sealed class CreateAppointmentCommandHandler(
 
         var slotDuration = center.SlotDurationMinutes ?? 15;
 
+        var dynamicSettings = await dynamicSettingsService.GetSettingsAsync(cancellationToken);
+        var cooldownSettings = new DonationCooldownSettings
+        {
+            WholeBloodMaleDays = dynamicSettings.WholeBloodMaleDays,
+            WholeBloodFemaleDays = dynamicSettings.WholeBloodFemaleDays,
+            PlasmaDays = dynamicSettings.PlasmaDays,
+            PlateletsDays = dynamicSettings.PlateletsDays
+        };
+
         var appointment = DonationAppointment.Book(
             request.DonorId,
             center.Id,
@@ -116,7 +125,7 @@ public sealed class CreateAppointmentCommandHandler(
             donor.LastDonationDate,
             activeLockout,
             donor.Gender,
-            cooldownOptions.Value,
+            cooldownSettings,
             dateTimeProvider.LocalNow,
             source: DonationSource.MobileApp);
 

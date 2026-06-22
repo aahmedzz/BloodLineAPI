@@ -58,10 +58,9 @@ public sealed class CreateDonationCommandHandler(
 
         if (donor != null)
         {
-            // Check for any active donation at the requested center (Pending or Approved)
+            // Check for any active donation across all centers (Pending or Approved)
             var activeDonation = await dbContext.DonationAppointments
                 .FirstOrDefaultAsync(da => da.DonorId == donor.Id && 
-                                          da.DonationCenterId == request.DonationCenterId &&
                                           (da.DonationStatus == DonationStatus.Pending || da.DonationStatus == DonationStatus.Approved), 
                                      cancellationToken);
 
@@ -73,14 +72,12 @@ public sealed class CreateDonationCommandHandler(
                 }
                 existingPendingDonation = activeDonation;
             }
-            else
+
+            // Verify eligibility for existing donor (always check, regardless of pending status, to catch post-booking ineligibility)
+            var eligibilityResult = await CheckDonorEligibilityInternalAsync(donor.Id, cancellationToken);
+            if (!eligibilityResult.IsSuccess)
             {
-                // Verify eligibility for existing donor
-                var eligibilityResult = await CheckDonorEligibilityInternalAsync(donor.Id, cancellationToken);
-                if (!eligibilityResult.IsSuccess)
-                {
-                    return Result<Guid>.Failure(eligibilityResult.Error!);
-                }
+                return Result<Guid>.Failure(eligibilityResult.Error!);
             }
 
             // Update existing donor profile details
@@ -113,26 +110,27 @@ public sealed class CreateDonationCommandHandler(
             return Result<Guid>.Failure("حملة التبرع هذه ليست نشطة حالياً.");
         }
 
-        var localNow = dateTimeProvider.LocalNow;
-        if (!center.IsOperatingOn(localNow))
-        {
-            return Result<Guid>.Failure("Donation center is closed today.");
-        }
-
-        // 4. Resolve Time Slot
-        var slotResult = ResolveTimeSlot(center, existingPendingDonation, localNow);
-        if (!slotResult.IsSuccess)
-        {
-            return Result<Guid>.Failure(slotResult.Error!);
-        }
-
-        var (slotStart, slotEnd) = slotResult.Data;
         var sourceEnum = request.Source.Trim().ToLowerInvariant() switch
         {
             "campaign" => DonationSource.Campaign,
             "mobileapp" => DonationSource.MobileApp,
             _ => DonationSource.WalkIn
         };
+
+        var localNow = dateTimeProvider.LocalNow;
+        if (sourceEnum != DonationSource.WalkIn && !center.IsOperatingOn(localNow))
+        {
+            return Result<Guid>.Failure("Donation center is closed today.");
+        }
+
+        // 4. Resolve Time Slot
+        var slotResult = ResolveTimeSlot(center, existingPendingDonation, localNow, sourceEnum);
+        if (!slotResult.IsSuccess)
+        {
+            return Result<Guid>.Failure(slotResult.Error!);
+        }
+
+        var (slotStart, slotEnd) = slotResult.Data;
 
         // 5. Update or Register Donation Appointment
         if (existingPendingDonation != null)
@@ -284,19 +282,39 @@ public sealed class CreateDonationCommandHandler(
     private Result<(TimeSpan Start, TimeSpan End)> ResolveTimeSlot(
         DonationCenter center,
         DonationAppointment? existingPendingDonation,
-        DateTime localNow)
+        DateTime localNow,
+        DonationSource source)
     {
         if (existingPendingDonation != null && existingPendingDonation.ScheduledDate.Date == localNow.Date)
         {
             return Result<(TimeSpan, TimeSpan)>.Success((existingPendingDonation.StartTime, existingPendingDonation.EndTime));
         }
 
-        var slots = center.GenerateTimeSlotsForDate(localNow, center.CenterExclusions.ToList(), center.OpeningHours.ToList());
         var time = localNow.TimeOfDay;
-        var matchingSlot = slots.Cast<(TimeSpan Start, TimeSpan End, int MaxPerSlot)?>()
-            .FirstOrDefault(s => s.HasValue && IsTimeInSlot(time, s.Value.Start, s.Value.End));
 
-        if (matchingSlot != null)
+        // For all walk-in donations (from the doctor system): the doctor is physically at the center with the donor,
+        // so we always assign a slot at the current time regardless of opening hours/schedules/day of week/exclusions.
+        if (source == DonationSource.WalkIn)
+        {
+            var slotDuration = center.SlotDurationMinutes ?? 15;
+            var slotEnd = TimeSpan.FromTicks(time.Add(TimeSpan.FromMinutes(slotDuration)).Ticks % TimeSpan.TicksPerDay);
+            return Result<(TimeSpan, TimeSpan)>.Success((time, slotEnd));
+        }
+
+        var slots = center.GenerateTimeSlotsForDate(localNow, center.CenterExclusions.ToList(), center.OpeningHours.ToList());
+
+        // Use a direct typed search — Cast<nullable_tuple>() does not work on non-nullable value-tuple lists
+        (TimeSpan Start, TimeSpan End, int MaxPerSlot)? matchingSlot = null;
+        foreach (var slot in slots)
+        {
+            if (IsTimeInSlot(time, slot.Start, slot.End))
+            {
+                matchingSlot = slot;
+                break;
+            }
+        }
+
+        if (matchingSlot.HasValue)
         {
             return Result<(TimeSpan, TimeSpan)>.Success((matchingSlot.Value.Start, matchingSlot.Value.End));
         }
@@ -329,7 +347,12 @@ public sealed class CreateDonationCommandHandler(
             return Result<(TimeSpan, TimeSpan)>.Failure("The campaign is currently closed or has no available slots at this time.");
         }
 
-        return Result<(TimeSpan, TimeSpan)>.Failure("The center is currently closed or has no available slots at this time.");
+        // Fallback for non-walk-in requests
+        {
+            var slotDuration = center.SlotDurationMinutes ?? 15;
+            var slotEnd = TimeSpan.FromTicks(time.Add(TimeSpan.FromMinutes(slotDuration)).Ticks % TimeSpan.TicksPerDay);
+            return Result<(TimeSpan, TimeSpan)>.Success((time, slotEnd));
+        }
     }
 
     private static bool IsTimeInSlot(TimeSpan time, TimeSpan start, TimeSpan end)

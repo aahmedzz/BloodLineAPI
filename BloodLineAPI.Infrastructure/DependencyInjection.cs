@@ -36,6 +36,7 @@ public static class DependencyInjection
 
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddSingleton<IDateTimeProvider, Services.DateTimeProvider>();
+        services.AddSingleton<IDynamicSettingsService, Services.DynamicSettingsService>();
         services.AddScoped<IJwtGenerator, JwtGenerator>();
         services.AddScoped<IRegistrationOtpService, RegistrationOtpService>();
         services.AddScoped<IPdfGenerator, Services.PdfGenerator>();
@@ -45,11 +46,11 @@ public static class DependencyInjection
         {
             services.Configure<FirebaseOptions>(firebaseSection);
             services.AddHostedService<FirebaseInitializer>();
-            services.AddScoped<INotificationSender, FirebaseNotificationSender>();
+            services.AddScoped<IPushNotificationDispatcher, FirebaseNotificationSender>();
         }
         else
         {
-            services.AddScoped<INotificationSender, NoOpNotificationSender>();
+            services.AddScoped<IPushNotificationDispatcher, NoOpNotificationSender>();
         }
 
         services.AddScoped<AppointmentReminderJob>();
@@ -58,12 +59,12 @@ public static class DependencyInjection
         services.AddScoped<DeferralExpiryJob>();
         services.AddScoped<ICampaignScheduler, CampaignScheduler>();
         services.AddScoped<IDonorStatusScheduler, DonorStatusScheduler>();
+        services.AddScoped<IAppointmentRealignmentScheduler, AppointmentRealignmentScheduler>();
         services.AddScoped<ActivateCampaignJob>();
         services.AddScoped<DeactivateCampaignJob>();
         services.AddScoped<CompleteCampaignJob>();
         services.AddScoped<BloodBagExpiryJob>();
 
-        services.Configure<DonationCooldownSettings>(configuration.GetSection("DonationCooldown"));
         services.Configure<AppointmentSettings>(configuration.GetSection("Appointment"));
         services.Configure<BloodBagExpirySettings>(configuration.GetSection("BloodBagExpiry"));
 

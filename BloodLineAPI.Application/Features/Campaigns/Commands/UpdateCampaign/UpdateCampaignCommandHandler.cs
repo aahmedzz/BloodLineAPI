@@ -17,7 +17,8 @@ namespace BloodLineAPI.Application.Features.Campaigns.Commands.UpdateCampaign;
 public sealed class UpdateCampaignCommandHandler(
     IApplicationDbContext dbContext,
     ICampaignScheduler campaignScheduler,
-    IDateTimeProvider dateTimeProvider)
+    IDateTimeProvider dateTimeProvider,
+    IAppointmentRealignmentScheduler appointmentRealignmentScheduler)
     : IRequestHandler<UpdateCampaignCommand, Result<CampaignDto>>
 {
     public async Task<Result<CampaignDto>> Handle(UpdateCampaignCommand request, CancellationToken cancellationToken)
@@ -38,6 +39,7 @@ public sealed class UpdateCampaignCommandHandler(
 
         // Track if schedule is changing
         bool scheduleChanged = false;
+        bool slotSettingsChanged = false;
         var nowLocal = dateTimeProvider.LocalNow;
 
         if (request.Title != null) campaign.Name = request.Title;
@@ -48,8 +50,18 @@ public sealed class UpdateCampaignCommandHandler(
         }
         if (request.Latitude.HasValue) campaign.Latitude = request.Latitude.Value;
         if (request.Longitude.HasValue) campaign.Longitude = request.Longitude.Value;
-        if (request.SlotCapacity.HasValue) campaign.MaxDonorsPerSlot = request.SlotCapacity.Value;
-        if (request.SlotDuration.HasValue) campaign.SlotDurationMinutes = request.SlotDuration.Value;
+        
+        if (request.SlotCapacity.HasValue && campaign.MaxDonorsPerSlot != request.SlotCapacity.Value)
+        {
+            campaign.MaxDonorsPerSlot = request.SlotCapacity.Value;
+            slotSettingsChanged = true;
+        }
+        if (request.SlotDuration.HasValue && campaign.SlotDurationMinutes != request.SlotDuration.Value)
+        {
+            campaign.SlotDurationMinutes = request.SlotDuration.Value;
+            slotSettingsChanged = true;
+        }
+        
         if (request.TargetDonors.HasValue) campaign.TargetDonors = request.TargetDonors.Value;
         if (request.Description != null) campaign.DescriptionText = request.Description;
 
@@ -73,6 +85,7 @@ public sealed class UpdateCampaignCommandHandler(
             {
                 campaign.StartTime = parsedStartTime;
                 scheduleChanged = true;
+                slotSettingsChanged = true;
             }
         }
 
@@ -83,6 +96,7 @@ public sealed class UpdateCampaignCommandHandler(
             {
                 campaign.EndTime = parsedEndTime;
                 scheduleChanged = true;
+                slotSettingsChanged = true;
             }
         }
 
@@ -271,6 +285,14 @@ public sealed class UpdateCampaignCommandHandler(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        if (slotSettingsChanged)
+        {
+            appointmentRealignmentScheduler.EnqueueRealignment(
+                campaign.Id,
+                campaign.SlotDurationMinutes ?? 15,
+                campaign.MaxDonorsPerSlot);
+        }
 
         // Fetch counts for mapping
         var registeredDonorsCount = await dbContext.DonationAppointments
