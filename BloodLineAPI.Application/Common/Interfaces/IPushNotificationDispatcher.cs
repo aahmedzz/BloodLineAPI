@@ -1,6 +1,11 @@
 namespace BloodLineAPI.Application.Common.Interfaces;
 
-public interface INotificationSender
+/// <summary>
+/// Low-level infrastructure contract for dispatching raw push notifications to device(s).
+/// This is an internal transport-layer abstraction used exclusively by <see cref="INotificationService"/>.
+/// Application features should never depend on this directly.
+/// </summary>
+public interface IPushNotificationDispatcher
 {
     /// <summary>Send a push notification to a single donor.</summary>
     Task<bool> SendAsync(Guid donorId, string title, string message, CancellationToken ct = default);

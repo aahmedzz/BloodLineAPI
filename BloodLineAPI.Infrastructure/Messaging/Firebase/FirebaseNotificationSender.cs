@@ -7,7 +7,7 @@ namespace BloodLineAPI.Infrastructure.Messaging.Firebase;
 
 public sealed class FirebaseNotificationSender(
     IApplicationDbContext dbContext,
-    ILogger<FirebaseNotificationSender> logger) : INotificationSender
+    ILogger<FirebaseNotificationSender> logger) : IPushNotificationDispatcher
 {
     public async Task<bool> SendAsync(Guid donorId, string title, string message, CancellationToken ct = default)
     {

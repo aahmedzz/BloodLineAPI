@@ -438,6 +438,64 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.HasIndex("BloodTypeId");
 
                     b.ToTable("BloodStockThresholds");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("f0c1b2a3-9876-4321-b123-abcdef000001"),
+                            BloodTypeId = (byte)1,
+                            CriticalThreshold = 5,
+                            LowThreshold = 10
+                        },
+                        new
+                        {
+                            Id = new Guid("f0c1b2a3-9876-4321-b123-abcdef000002"),
+                            BloodTypeId = (byte)2,
+                            CriticalThreshold = 4,
+                            LowThreshold = 8
+                        },
+                        new
+                        {
+                            Id = new Guid("f0c1b2a3-9876-4321-b123-abcdef000003"),
+                            BloodTypeId = (byte)3,
+                            CriticalThreshold = 6,
+                            LowThreshold = 12
+                        },
+                        new
+                        {
+                            Id = new Guid("f0c1b2a3-9876-4321-b123-abcdef000004"),
+                            BloodTypeId = (byte)4,
+                            CriticalThreshold = 5,
+                            LowThreshold = 10
+                        },
+                        new
+                        {
+                            Id = new Guid("f0c1b2a3-9876-4321-b123-abcdef000005"),
+                            BloodTypeId = (byte)5,
+                            CriticalThreshold = 2,
+                            LowThreshold = 5
+                        },
+                        new
+                        {
+                            Id = new Guid("f0c1b2a3-9876-4321-b123-abcdef000006"),
+                            BloodTypeId = (byte)6,
+                            CriticalThreshold = 2,
+                            LowThreshold = 5
+                        },
+                        new
+                        {
+                            Id = new Guid("f0c1b2a3-9876-4321-b123-abcdef000007"),
+                            BloodTypeId = (byte)7,
+                            CriticalThreshold = 7,
+                            LowThreshold = 15
+                        },
+                        new
+                        {
+                            Id = new Guid("f0c1b2a3-9876-4321-b123-abcdef000008"),
+                            BloodTypeId = (byte)8,
+                            CriticalThreshold = 5,
+                            LowThreshold = 10
+                        });
                 });
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.ChatConversation", b =>
@@ -1272,6 +1330,62 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.ToTable("InventoryTransactions");
                 });
 
+            modelBuilder.Entity("BloodLineAPI.Domain.Entities.IssuanceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BloodBagId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("IssuedByStaffId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("LastModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NationalId")
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .HasColumnType("nvarchar(14)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("RecipientName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BloodBagId")
+                        .IsUnique();
+
+                    b.HasIndex("IssuedByStaffId");
+
+                    b.ToTable("IssuanceRecords");
+                });
+
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.MedicalScreening", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2100,6 +2214,25 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Navigation("ExecutedByStaff");
                 });
 
+            modelBuilder.Entity("BloodLineAPI.Domain.Entities.IssuanceRecord", b =>
+                {
+                    b.HasOne("BloodLineAPI.Domain.Entities.BloodEntities.BloodBag", "BloodBag")
+                        .WithOne("IssuanceRecord")
+                        .HasForeignKey("BloodLineAPI.Domain.Entities.IssuanceRecord", "BloodBagId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BloodLineAPI.Domain.Entities.Staff", "IssuedByStaff")
+                        .WithMany("IssuedBloodBags")
+                        .HasForeignKey("IssuedByStaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BloodBag");
+
+                    b.Navigation("IssuedByStaff");
+                });
+
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.MedicalScreening", b =>
                 {
                     b.HasOne("BloodLineAPI.Domain.Entities.DonationEntities.DonationAppointment", "DonationAppointment")
@@ -2254,6 +2387,8 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Navigation("DiscardRecord");
 
                     b.Navigation("InventoryTransactions");
+
+                    b.Navigation("IssuanceRecord");
                 });
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.BloodEntities.BloodType", b =>
@@ -2308,6 +2443,8 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.Navigation("CollectedBloodBags");
 
                     b.Navigation("InventoryTransactions");
+
+                    b.Navigation("IssuedBloodBags");
 
                     b.Navigation("MedicalScreenings");
 

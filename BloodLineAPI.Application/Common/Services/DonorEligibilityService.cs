@@ -18,7 +18,7 @@ namespace BloodLineAPI.Application.Common.Services;
 /// </summary>
 public sealed class DonorEligibilityService(
     IApplicationDbContext dbContext,
-    IOptions<DonationCooldownSettings> cooldownOptions,
+    IDynamicSettingsService dynamicSettingsService,
     IDateTimeProvider dateTimeProvider)
     : IDonorEligibilityService
 {
@@ -59,7 +59,8 @@ public sealed class DonorEligibilityService(
         // 3. Cooldown period check
         if (donor.LastDonationDate.HasValue)
         {
-            var cooldownDays = cooldownOptions.Value.GetCooldownDays(donationType, donor.Gender);
+            var settings = await dynamicSettingsService.GetSettingsAsync(cancellationToken);
+            var cooldownDays = settings.GetCooldownDays(donationType, donor.Gender);
             var daysSinceLast = (dateTimeProvider.CurrentLocalDate.ToDateTime(TimeOnly.MinValue) - donor.LastDonationDate.Value.Date).TotalDays;
 
             if (daysSinceLast < cooldownDays)

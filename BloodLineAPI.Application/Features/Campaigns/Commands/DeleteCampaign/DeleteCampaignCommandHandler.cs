@@ -19,7 +19,7 @@ namespace BloodLineAPI.Application.Features.Campaigns.Commands.DeleteCampaign;
 public sealed class DeleteCampaignCommandHandler(
     IApplicationDbContext dbContext,
     ICampaignScheduler campaignScheduler,
-    INotificationSender notificationSender,
+    INotificationService notificationService,
     IDateTimeProvider dateTimeProvider,
     ILogger<DeleteCampaignCommandHandler> logger)
     : IRequestHandler<DeleteCampaignCommand, Result<Unit>>
@@ -59,39 +59,28 @@ public sealed class DeleteCampaignCommandHandler(
             .ToListAsync(cancellationToken);
 
         var now = dateTimeProvider.LocalNow;
-        var notifications = new List<Notification>();
-        var notificationTasks = new List<(Guid DonorId, string Title, string Message, Notification Notif)>();
+        int cancelledCount = 0;
 
         foreach (var appt in pendingAppointments)
         {
             appt.Cancel("تم إلغاء الموعد بسبب حذف الحملة", now, gracePeriodMinutes: 0);
+            cancelledCount++;
 
             var title = "إلغاء موعد التبرع";
             var message = $"تم إلغاء موعدك في {campaign.Name} بسبب إلغاء حملة التبرع بالدم.";
-            var payload = JsonSerializer.Serialize(new Dictionary<string, string>
+            var payload = new Dictionary<string, string>
             {
                 ["targetEntity"] = "DonationAppointment",
                 ["targetId"] = appt.Id.ToString()
-            });
-
-            var notification = new Notification
-            {
-                UserId = appt.Donor.User.Id,
-                Title = title,
-                Message = message,
-                Type = NotificationType.AppointmentCancelled,
-                ActionPayload = payload,
-                SentDate = dateTimeProvider.UtcNow,
-                IsSent = false
             };
 
-            notifications.Add(notification);
-            notificationTasks.Add((appt.DonorId, title, message, notification));
-        }
-
-        if (notifications.Any())
-        {
-            dbContext.Notifications.AddRange(notifications);
+            await notificationService.SendNotificationAsync(
+                appt.DonorId,
+                title,
+                message,
+                NotificationType.AppointmentCancelled,
+                payload,
+                cancellationToken);
         }
 
         // 3. Unschedule Hangfire jobs
@@ -104,34 +93,11 @@ public sealed class DeleteCampaignCommandHandler(
         // 4. Remove campaign
         dbContext.DonationCenters.Remove(campaign);
 
-        // Save changes (cancelling appointments, adding notifications, and removing campaign)
+        // Save changes (cancelling appointments and removing campaign)
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        // 5. Send push notifications in background
-        foreach (var task in notificationTasks)
-        {
-            try
-            {
-                var sent = await notificationSender.SendAsync(task.DonorId, task.Title, task.Message, cancellationToken);
-                if (sent)
-                {
-                    task.Notif.IsSent = true;
-                    task.Notif.SentVia = "fcm";
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to send push notification to donor {DonorId} for cancelled appointment during campaign deletion.", task.DonorId);
-            }
-        }
-
-        if (notificationTasks.Any(t => t.Notif.IsSent))
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-
         logger.LogInformation("Campaign {CampaignId} ({CampaignCode}) deleted. {CancelledCount} pending appointments cancelled.",
-            campaign.Id, campaign.CampaignCode, notifications.Count);
+            campaign.Id, campaign.CampaignCode, cancelledCount);
 
         return Result<Unit>.Success(Unit.Value);
     }

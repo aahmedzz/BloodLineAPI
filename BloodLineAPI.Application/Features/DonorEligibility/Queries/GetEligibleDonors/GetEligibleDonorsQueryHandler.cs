@@ -17,7 +17,7 @@ namespace BloodLineAPI.Application.Features.DonorEligibility.Queries.GetEligible
 
 public sealed class GetEligibleDonorsQueryHandler(
     IApplicationDbContext dbContext,
-    IOptions<DonationCooldownSettings> cooldownOptions,
+    IDynamicSettingsService dynamicSettingsService,
     IDateTimeProvider dateTimeProvider,
     IDonorEligibilityService eligibilityService)
     : IRequestHandler<GetEligibleDonorsQuery, Result<PaginatedEligibilityResult>>
@@ -26,8 +26,9 @@ public sealed class GetEligibleDonorsQueryHandler(
         GetEligibleDonorsQuery request,
         CancellationToken cancellationToken)
     {
-        var maleDays = cooldownOptions.Value.WholeBloodMaleDays;
-        var femaleDays = cooldownOptions.Value.WholeBloodFemaleDays;
+        var settings = await dynamicSettingsService.GetSettingsAsync(cancellationToken);
+        var maleDays = settings.WholeBloodMaleDays;
+        var femaleDays = settings.WholeBloodFemaleDays;
         var todayLocal = dateTimeProvider.LocalNow.Date;
 
         var query = dbContext.Donors

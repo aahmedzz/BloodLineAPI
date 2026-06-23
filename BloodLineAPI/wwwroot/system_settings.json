@@ -1,0 +1,7 @@
+{
+  "WholeBloodMaleDays": 90,
+  "WholeBloodFemaleDays": 120,
+  "PlasmaDays": 28,
+  "PlateletsDays": 7,
+  "DefaultScreeningLockoutDays": 7
+}

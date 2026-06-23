@@ -10,8 +10,8 @@ namespace BloodLineAPI.Domain.Enums
     {
         Available = 0,
         Expired = 3,
-        Discarded = 4,
+        Disposed = 4,
         Testing = 5,
-        Exported = 6
+        Issued = 6
     }
 }

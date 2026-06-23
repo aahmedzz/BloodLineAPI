@@ -19,6 +19,7 @@ namespace BloodLineAPI.Domain.Entities.BloodEntities
         public ICollection<BloodComponent> BloodComponents { get; set; } = new List<BloodComponent>();
         public ICollection<InventoryTransaction> InventoryTransactions { get; set; } = new List<InventoryTransaction>();
         public DiscardRecord? DiscardRecord { get; set; }
+        public IssuanceRecord? IssuanceRecord { get; set; }
 
         
 

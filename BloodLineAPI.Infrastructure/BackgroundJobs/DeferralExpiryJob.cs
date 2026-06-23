@@ -12,7 +12,7 @@ namespace BloodLineAPI.Infrastructure.BackgroundJobs;
 
 public class DeferralExpiryJob(
     IApplicationDbContext dbContext,
-    INotificationSender notificationSender,
+    INotificationService notificationService,
     ILogger<DeferralExpiryJob> logger,
     IDateTimeProvider dateTimeProvider)
 {
@@ -44,27 +44,15 @@ public class DeferralExpiryJob(
             donor.Status = DonorStatus.Eligible;
             donor.LockoutUntil = null;
 
-            var notification = new Notification
-            {
-                UserId = donor.Id,
-                Title = "🚨 انتهاء فترة عدم المؤهلية للتبرع",
-                Message = "لقد انتهت فترة القيد الطبي الخاصة بك. يمكنك الآن التبرع بالدم بأمان ومساعدة الآخرين!",
-                Type = NotificationType.General,
-                ActionPayload = null,
-                SentDate = dateTimeProvider.UtcNow,
-                IsSent = false
-            };
-
-            dbContext.Notifications.Add(notification);
             await dbContext.SaveChangesAsync(ct);
 
-            var sent = await notificationSender.SendAsync(donor.Id, notification.Title, notification.Message, ct);
-            if (sent)
-            {
-                notification.IsSent = true;
-                notification.SentVia = "fcm";
-                await dbContext.SaveChangesAsync(ct);
-            }
+            await notificationService.SendNotificationAsync(
+                donor.Id,
+                "🚨 انتهاء فترة عدم المؤهلية للتبرع",
+                "لقد انتهت فترة القيد الطبي الخاصة بك. يمكنك الآن التبرع بالدم بأمان ومساعدة الآخرين!",
+                NotificationType.General,
+                payload: null,
+                ct);
 
             logger.LogInformation("Donor {DonorId} status updated from {OldStatus} to Eligible.", donorId, oldStatus);
         }

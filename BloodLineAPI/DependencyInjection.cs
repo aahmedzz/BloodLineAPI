@@ -93,6 +93,7 @@ public static class DependencyInjection
         {
             // Policy named "Lab" accepts both the legacy role name and the contract's "lab" role.
             options.AddPolicy("Lab", policy => policy.RequireRole("LabDoctor", "lab"));
+            options.AddPolicy("InventoryManager", policy => policy.RequireRole("InventoryManager", "inventoryManager"));
         });
 
         services.AddApiVersioning(options =>

@@ -20,7 +20,7 @@ public sealed class GetDoctorDashboardQueryHandler(
     IApplicationDbContext dbContext,
     ICurrentUserService currentUserService,
     IDateTimeProvider dateTimeProvider,
-    IOptions<DonationCooldownSettings> cooldownOptions)
+    IDynamicSettingsService dynamicSettingsService)
     : IRequestHandler<GetDoctorDashboardQuery, Result<DoctorDashboardDto>>
 {
     public async Task<Result<DoctorDashboardDto>> Handle(GetDoctorDashboardQuery request, CancellationToken cancellationToken)
@@ -37,8 +37,17 @@ public sealed class GetDoctorDashboardQueryHandler(
         var localNow = dateTimeProvider.LocalNow;
         var todayDate = localNow.Date;
 
+        var dynamicSettings = await dynamicSettingsService.GetSettingsAsync(cancellationToken);
+        var cooldownSettings = new DonationCooldownSettings
+        {
+            WholeBloodMaleDays = dynamicSettings.WholeBloodMaleDays,
+            WholeBloodFemaleDays = dynamicSettings.WholeBloodFemaleDays,
+            PlasmaDays = dynamicSettings.PlasmaDays,
+            PlateletsDays = dynamicSettings.PlateletsDays
+        };
+
         // 3. Gather statistics, sources, weekly chart, and listings sequentially (DbContext is not thread-safe)
-        var statistics = await GetStatisticsAsync(doctorUserId, todayDate, utcNow, cooldownOptions.Value, cancellationToken);
+        var statistics = await GetStatisticsAsync(doctorUserId, todayDate, utcNow, cooldownSettings, cancellationToken);
         var sources = await GetSourcesAsync(todayDate, cancellationToken);
         var weeklyChart = await GetWeeklyChartAsync(todayDate, localNow, cancellationToken);
         var activeCampaigns = await GetActiveCampaignsAsync(cancellationToken);

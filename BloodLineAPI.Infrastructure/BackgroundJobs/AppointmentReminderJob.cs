@@ -9,7 +9,7 @@ namespace BloodLineAPI.Infrastructure.BackgroundJobs;
 
 public class AppointmentReminderJob(
     IApplicationDbContext dbContext,
-    INotificationSender notificationSender,
+    INotificationService notificationService,
     ILogger<AppointmentReminderJob> logger,
     IDateTimeProvider dateTimeProvider)
 {
@@ -34,33 +34,31 @@ public class AppointmentReminderJob(
 
             if (minutesToStart is >= 1425 and <= 1455)
             {
-                await SendAndPersistAsync(
-                    appt.Donor.User.Id,
+                await notificationService.SendNotificationAsync(
                     appt.DonorId,
                     "Appointment Reminder",
                     $"Your donation appointment at {appt.DonationCenter.Name} is tomorrow at {appt.StartTime:hh\\:mm}.",
                     NotificationType.AppointmentReminder,
-                    JsonSerializer.Serialize(new Dictionary<string, string>
+                    new Dictionary<string, string>
                     {
                         ["targetEntity"] = "DonationAppointment",
                         ["targetId"] = appt.Id.ToString()
-                    }),
+                    },
                     ct);
             }
 
             if (minutesToStart is >= 45 and <= 75)
             {
-                await SendAndPersistAsync(
-                    appt.Donor.User.Id,
+                await notificationService.SendNotificationAsync(
                     appt.DonorId,
                     "Appointment Reminder",
                     $"Your donation appointment at {appt.DonationCenter.Name} starts at {appt.StartTime:hh\\:mm}.",
                     NotificationType.AppointmentReminder,
-                    JsonSerializer.Serialize(new Dictionary<string, string>
+                    new Dictionary<string, string>
                     {
                         ["targetEntity"] = "DonationAppointment",
                         ["targetId"] = appt.Id.ToString()
-                    }),
+                    },
                     ct);
             }
         }
@@ -68,29 +66,5 @@ public class AppointmentReminderJob(
         logger.LogInformation("Appointment reminder scan completed at {Now}.", now);
     }
 
-    private async Task SendAndPersistAsync(Guid userId, Guid donorId, string title, string message, NotificationType type, string? actionPayload, CancellationToken ct)
-    {
-        var notification = new Notification
-        {
-            UserId = userId,
-            Title = title,
-            Message = message,
-            Type = type,
-            ActionPayload = actionPayload,
-            SentDate = dateTimeProvider.UtcNow,
-            IsSent = false
-        };
 
-        dbContext.Notifications.Add(notification);
-        await dbContext.SaveChangesAsync(ct);
-
-        var sent = await notificationSender.SendAsync(donorId, title, message, ct);
-
-        if (sent)
-        {
-            notification.IsSent = true;
-            notification.SentVia = "fcm";
-            await dbContext.SaveChangesAsync(ct);
-        }
-    }
 }

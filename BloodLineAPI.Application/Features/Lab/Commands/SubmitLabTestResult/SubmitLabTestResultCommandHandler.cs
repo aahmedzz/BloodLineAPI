@@ -6,22 +6,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BloodLineAPI.Application.Features.Lab.Commands.SubmitLabTestResult;
 
-public sealed class SubmitLabTestResultCommandHandler : IRequestHandler<SubmitLabTestResultCommand, SubmitLabTestResultResult>
+public sealed class SubmitLabTestResultCommandHandler(
+    ICurrentUserService currentUserService,
+    IApplicationDbContext dbContext) : IRequestHandler<SubmitLabTestResultCommand, SubmitLabTestResultResult>
 {
-    private readonly ICurrentUserService _currentUserService;
-    private readonly IApplicationDbContext _dbContext;
-
-    public SubmitLabTestResultCommandHandler(
-        ICurrentUserService currentUserService,
-        IApplicationDbContext dbContext)
-    {
-        _currentUserService = currentUserService;
-        _dbContext = dbContext;
-    }
+    private readonly ICurrentUserService _currentUserService = currentUserService;
+    private readonly IApplicationDbContext _dbContext = dbContext;
 
     public async Task<SubmitLabTestResultResult> Handle(SubmitLabTestResultCommand request, CancellationToken cancellationToken)
     {
-        string[] allowed = { "negative", "positive" };
+        string[] allowed = ["negative", "positive"];
 
         if (request.Notes?.Length > 500)
             throw new ArgumentException("Notes cannot exceed 500 characters.");
@@ -41,7 +35,7 @@ public sealed class SubmitLabTestResultCommandHandler : IRequestHandler<SubmitLa
                 .ThenInclude(bb => bb!.BloodTestResults)
             .FirstOrDefaultAsync(d => d.Id == request.DonationAppointmentId, cancellationToken);
 
-        if (donation == null)
+        if (donation is null)
             throw new KeyNotFoundException("Lab test not found.");
 
         if (donation.BloodBag == null)
@@ -49,23 +43,22 @@ public sealed class SubmitLabTestResultCommandHandler : IRequestHandler<SubmitLa
                 "Blood bag not associated with this donation.");
         var bloodBag = donation.BloodBag;
 
-        if (bloodBag.BloodTestResults.Any())
+        if (bloodBag.BloodTestResults.Count > 0)
             throw new InvalidOperationException("Test already completed for this sample.");
 
         var outcome = (request.Hcv == "negative" && request.Hbv == "negative" &&
                        request.Syphilis == "negative" && request.Hiv == "negative")
             ? "safe" : "rejected";
 
-        var parsed = ParseBloodTypeString(
-        request.ConfirmedBloodType);
+        var (group, rh) = ParseBloodTypeString(request.ConfirmedBloodType);
 
         var bt = await _dbContext.BloodTypes
             .FirstOrDefaultAsync(
-                b => b.BloodGroupName == parsed.group &&
-                     b.RhFactor == parsed.rh,
+                b => b.BloodGroupName == group &&
+                     b.RhFactor == rh,
                 cancellationToken);
 
-        if (bt == null)
+        if (bt is null)
             throw new ArgumentException(
                 "Invalid confirmed blood type.");
 
@@ -93,7 +86,13 @@ public sealed class SubmitLabTestResultCommandHandler : IRequestHandler<SubmitLa
         await _dbContext.BloodTestResults.AddAsync(testResult, cancellationToken);
 
         var previous = bloodBag.Status;
-        bloodBag.Status = outcome == "safe" ? BloodBagStatus.Available : BloodBagStatus.Discarded;
+        bloodBag.Status = outcome == "safe" ? BloodBagStatus.Available : BloodBagStatus.Disposed;
+        bloodBag.BloodTypeId = confirmedBloodTypeId;
+
+        if (donation.Donor != null)
+        {
+            donation.Donor.BloodTypeId = confirmedBloodTypeId;
+        }
 
         var tx = new Domain.Entities.InventoryTransaction
         {
@@ -108,7 +107,7 @@ public sealed class SubmitLabTestResultCommandHandler : IRequestHandler<SubmitLa
         await _dbContext.InventoryTransactions.AddAsync(tx, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        var staff = await _dbContext.Staff.FindAsync(new object[] { staffId }, cancellationToken);
+        var staff = await _dbContext.Staff.FindAsync([staffId], cancellationToken);
         var staffName = staff?.FullName ?? string.Empty;
 
         return new SubmitLabTestResultResult(donation.Id, outcome, bloodBag.Id, now, staffId, staffName);

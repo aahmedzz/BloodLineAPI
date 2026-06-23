@@ -363,3 +363,7 @@ MigrationBackup/
 FodyWeavers.xsd
 # Firebase service account key (private)
 **/firebase-service-account*.json
+
+# Project Map & Developer guidelines for AI Agents (Local only)
+PROJECT_MAP.md
+
