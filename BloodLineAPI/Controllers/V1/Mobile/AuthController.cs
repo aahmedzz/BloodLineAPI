@@ -8,6 +8,9 @@ using BloodLineAPI.Application.Features.Auth.Commands.RegisterMobileUser;
 using BloodLineAPI.Application.Features.Auth.Commands.ResetMobilePassword;
 using BloodLineAPI.Application.Features.Auth.Commands.VerifyForgotPasswordOtp;
 using BloodLineAPI.Application.Features.Auth.Commands.VerifyMobileRegistrationOtp;
+using BloodLineAPI.Application.Features.Auth.Commands.ActivateAccount;
+using BloodLineAPI.Application.Features.Auth.Commands.VerifyActivationOtp;
+using BloodLineAPI.Application.Features.Auth.Queries.GetCurrentMobileUser;
 using BloodLineAPI.Attributes;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -233,4 +236,66 @@ public class AuthController(ISender sender) : ControllerBase
         return Ok(ApiResponse<object>.Ok(null!, message: result.Data!));
     }
 
+    /// <summary>
+    /// Activate an offline donor account.
+    /// </summary>
+    [HttpPost("activate-account")]
+    [ProducesResponseType(typeof(ApiResponse<ActivateAccountResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ActivateAccount([FromBody] ActivateAccountCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(command, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
+        }
+
+        return Ok(ApiResponse<ActivateAccountResponse>.Ok(result.Data!));
+    }
+
+    /// <summary>
+    /// Verify activation OTP code.
+    /// </summary>
+    [HttpPost("verify-activation-otp")]
+    [ProducesResponseType(typeof(ApiResponse<DonorAuthResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> VerifyActivationOtp([FromBody] VerifyActivationOtpCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(command, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
+        }
+
+        return Ok(ApiResponse<DonorAuthResponse>.Ok(result.Data!));
+    }
+
+    /// <summary>
+    /// Get currently authenticated mobile user profile.
+    /// </summary>
+    [Authorize]
+    [HttpGet("me")]
+    [ProducesResponseType(typeof(ApiResponse<MobileUserProfileResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetMe(CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(ApiResponse<object>.Fail("Invalid or missing authentication token."));
+        }
+
+        var result = await _sender.Send(new GetCurrentMobileUserQuery(userId), cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
+        }
+
+        return Ok(ApiResponse<MobileUserProfileResponse>.Ok(result.Data!));
+    }
+
 }
+
