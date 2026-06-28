@@ -129,6 +129,11 @@ public sealed class CreateAppointmentCommandHandler(
             dateTimeProvider.LocalNow,
             source: DonationSource.MobileApp);
 
+        if (request.UrgentBloodAppealId.HasValue)
+        {
+            appointment.SetUrgentBloodAppeal(request.UrgentBloodAppealId.Value);
+        }
+
         dbContext.DonationAppointments.Add(appointment);
         await dbContext.SaveChangesAsync(cancellationToken);
 

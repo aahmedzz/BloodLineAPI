@@ -1,4 +1,5 @@
 using BloodLineAPI.Domain.Entities.DonationEntities;
+using BloodLineAPI.Domain.Entities;
 using BloodLineAPI.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -55,6 +56,11 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
             // The actual FK relationship is configured from MedicalScreeningConfiguration
             // (MedicalScreening.DonationAppointmentId -> DonationAppointments).
             builder.Ignore(da => da.MedicalScreening);
+
+            builder.HasOne(da => da.UrgentBloodAppeal)
+                .WithMany()
+                .HasForeignKey(da => da.UrgentBloodAppealId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

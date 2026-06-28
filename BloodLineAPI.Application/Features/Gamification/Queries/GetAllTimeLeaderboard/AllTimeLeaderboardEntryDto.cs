@@ -6,4 +6,5 @@ public sealed record AllTimeLeaderboardEntryDto(
     string? District,
     string? Area,
     int Points,
-    int Rank);
+    int Rank,
+    bool IsCurrentUser);

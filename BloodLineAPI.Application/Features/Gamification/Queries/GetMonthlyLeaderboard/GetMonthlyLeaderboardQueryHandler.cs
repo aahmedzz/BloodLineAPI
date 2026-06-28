@@ -6,19 +6,17 @@ using Microsoft.EntityFrameworkCore;
 namespace BloodLineAPI.Application.Features.Gamification.Queries.GetMonthlyLeaderboard;
 
 public sealed class GetMonthlyLeaderboardQueryHandler(IApplicationDbContext dbContext)
-    : IRequestHandler<GetMonthlyLeaderboardQuery, IReadOnlyList<MonthlyLeaderboardEntryDto>>
+    : IRequestHandler<GetMonthlyLeaderboardQuery, MonthlyLeaderboardResponseDto>
 {
-    public async Task<IReadOnlyList<MonthlyLeaderboardEntryDto>> Handle(GetMonthlyLeaderboardQuery request, CancellationToken cancellationToken)
+    public async Task<MonthlyLeaderboardResponseDto> Handle(GetMonthlyLeaderboardQuery request, CancellationToken cancellationToken)
     {
         var top = request.Top <= 0 ? 10 : Math.Min(request.Top, 100);
 
-        var requesterLocation = await dbContext.Donors
+        var requester = await dbContext.Donors
             .AsNoTracking()
-            .Where(d => d.Id == request.RequestingDonorId)
-            .Select(d => new { d.District, d.Area })
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(d => d.Id == request.RequestingDonorId, cancellationToken);
 
-        if (requesterLocation is null)
+        if (requester is null)
         {
             throw new NotFoundException("Donor", request.RequestingDonorId);
         }
@@ -29,22 +27,22 @@ public sealed class GetMonthlyLeaderboardQueryHandler(IApplicationDbContext dbCo
 
         if (request.OnlyMyDistrict)
         {
-            if (string.IsNullOrWhiteSpace(requesterLocation.District))
+            if (string.IsNullOrWhiteSpace(requester.District))
             {
-                return [];
+                return new MonthlyLeaderboardResponseDto([], null);
             }
 
-            query = query.Where(d => d.District == requesterLocation.District);
+            query = query.Where(d => d.District == requester.District);
         }
 
         if (request.OnlyMyArea)
         {
-            if (string.IsNullOrWhiteSpace(requesterLocation.Area))
+            if (string.IsNullOrWhiteSpace(requester.Area))
             {
-                return [];
+                return new MonthlyLeaderboardResponseDto([], null);
             }
 
-            query = query.Where(d => d.Area == requesterLocation.Area);
+            query = query.Where(d => d.Area == requester.Area);
         }
 
         var donors = await query
@@ -54,8 +52,46 @@ public sealed class GetMonthlyLeaderboardQueryHandler(IApplicationDbContext dbCo
             .Select(d => new { d.Id, d.FullName, d.District, d.Area, d.MonthlyPoints })
             .ToListAsync(cancellationToken);
 
-        return donors
-            .Select((d, index) => new MonthlyLeaderboardEntryDto(d.Id, d.FullName, d.District, d.Area, d.MonthlyPoints, index + 1))
+        var entries = donors
+            .Select((d, index) => new MonthlyLeaderboardEntryDto(
+                d.Id,
+                d.FullName,
+                d.District,
+                d.Area,
+                d.MonthlyPoints,
+                index + 1,
+                d.Id == request.RequestingDonorId))
             .ToList();
+
+        // Calculate my rank
+        MonthlyLeaderboardEntryDto? myEntry = null;
+        if (requester.AllowLeaderboardVisibility)
+        {
+            var rankQuery = dbContext.Donors
+                .AsNoTracking()
+                .Where(d => d.AllowLeaderboardVisibility);
+
+            if (request.OnlyMyDistrict && !string.IsNullOrWhiteSpace(requester.District))
+            {
+                rankQuery = rankQuery.Where(d => d.District == requester.District);
+            }
+            if (request.OnlyMyArea && !string.IsNullOrWhiteSpace(requester.Area))
+            {
+                rankQuery = rankQuery.Where(d => d.Area == requester.Area);
+            }
+
+            var myRank = await rankQuery.CountAsync(d => d.MonthlyPoints > requester.MonthlyPoints, cancellationToken) + 1;
+
+            myEntry = new MonthlyLeaderboardEntryDto(
+                requester.Id,
+                requester.FullName,
+                requester.District,
+                requester.Area,
+                requester.MonthlyPoints,
+                myRank,
+                true);
+        }
+
+        return new MonthlyLeaderboardResponseDto(entries, myEntry);
     }
 }

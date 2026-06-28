@@ -33,6 +33,11 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("BadgeDescriptionAr")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("BadgeKey")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -71,101 +76,158 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("f6ee9496-e7fb-43c3-8275-ec5f35cf01a1"),
-                            BadgeDescription = "Awarded for completing your first donation.",
+                            BadgeDescription = "The journey begins! You've earned this title by giving the gift of life and taking your first step toward saving others.",
+                            BadgeDescriptionAr = "تبدأ الرحلة! لقد حصلت على هذا اللقب بتقديمك هدية الحياة واتخاذ خطوتك الأولى نحو إنقاذ الآخرين.",
                             BadgeKey = "giver",
                             BadgeName = "Giver",
                             BadgeNameAr = "المعطي",
                             BadgeType = "Milestone",
-                            BonusPoints = 50,
+                            BonusPoints = 100,
                             IconUrl = "badges/giver.png"
                         },
                         new
                         {
                             Id = new Guid("cc39fc72-7f5f-4d17-9bfd-9a2f3f5b8db1"),
-                            BadgeDescription = "Awarded after 3 completed donations.",
+                            BadgeDescription = "A true community pillar! By donating 3 times, you have helped sustain the lives of more than 9 people.",
+                            BadgeDescriptionAr = "ركيزة حقيقية للمجتمع! بتبرعك 3 مرات، ساعدت في دعم حياة أكثر من 9 أشخاص.",
                             BadgeKey = "helper",
                             BadgeName = "Helper",
                             BadgeNameAr = "المساعد",
                             BadgeType = "Milestone",
-                            BonusPoints = 75,
+                            BonusPoints = 300,
                             IconUrl = "badges/helper.png"
                         },
                         new
                         {
                             Id = new Guid("89e198c4-d715-4cf6-a85f-7696159f423a"),
-                            BadgeDescription = "Awarded after 5 completed donations.",
+                            BadgeDescription = "A title for the brave! Your consistent contributions have made you a real-life hero in the eyes of those you've saved.",
+                            BadgeDescriptionAr = "لقب للشجعان! تبرعاتك المستمرة جعلت منك بطلاً حقيقياً في عيون أولئك الذين أنقذتهم.",
                             BadgeKey = "hero",
                             BadgeName = "Hero",
                             BadgeNameAr = "البطل",
                             BadgeType = "Milestone",
-                            BonusPoints = 100,
+                            BonusPoints = 500,
                             IconUrl = "badges/hero.png"
                         },
                         new
                         {
                             Id = new Guid("e3f8c38b-3858-45f0-b571-c7ec736dbfee"),
-                            BadgeDescription = "Awarded after 10 completed donations.",
+                            BadgeDescription = "Your generosity knows no bounds! With 10 donations, you have become a vital protector of countless lives.",
+                            BadgeDescriptionAr = "كرمك ليس له حدود! مع 10 تبرعات، أصبحت حامياً حيوياً لحياة لا حصر لها.",
                             BadgeKey = "life_saver",
                             BadgeName = "Life Saver",
                             BadgeNameAr = "منقذ الحياة",
                             BadgeType = "Milestone",
-                            BonusPoints = 150,
+                            BonusPoints = 800,
                             IconUrl = "badges/life_saver.png"
                         },
                         new
                         {
                             Id = new Guid("c80d19d2-63d9-4fb6-bf77-fa8f253f50b4"),
-                            BadgeDescription = "Awarded after 20 completed donations.",
+                            BadgeDescription = "The ultimate elite! You are now a legendary savior in your community, leaving a legacy of hope and saved lives.",
+                            BadgeDescriptionAr = "النخبة المطلقة! أنت الآن منقذ أسطوري في مجتمعك، تاركاً إرثاً من الأمل والأرواح التي تم إنقاذها.",
                             BadgeKey = "monqez",
                             BadgeName = "Monqez",
                             BadgeNameAr = "منقذ",
                             BadgeType = "Milestone",
-                            BonusPoints = 300,
+                            BonusPoints = 1000,
                             IconUrl = "badges/monqez.png"
                         },
                         new
                         {
-                            Id = new Guid("2ef1880e-ca8b-4383-8584-3b31f1fb9448"),
-                            BadgeDescription = "Awarded for the first emergency donation.",
-                            BadgeKey = "responder",
-                            BadgeName = "Responder",
-                            BadgeNameAr = "المستجيب",
+                            Id = new Guid("a2cdeef5-2b0e-473d-88b6-9de0237e1a01"),
+                            BadgeDescription = "Defender of the vulnerable! Your dedicated platelet donations provide strength and hope to those fighting critical conditions.",
+                            BadgeDescriptionAr = "مدافع عن الفئات الأكثر ضعفاً! تبرعك بالصفائح الدموية يمنح القوة والأمل للمرضى في الحالات الحرجة.",
+                            BadgeKey = "platelet_guardian",
+                            BadgeName = "Platelet Guardian",
+                            BadgeNameAr = "حارس الصفائح",
+                            BadgeType = "Action",
+                            BonusPoints = 200,
+                            IconUrl = "badges/platelet_guardian.png"
+                        },
+                        new
+                        {
+                            Id = new Guid("b2cdeef5-2b0e-473d-88b6-9de0237e1a02"),
+                            BadgeDescription = "Liquid gold giver! Your plasma donation helps create life-saving therapies for patients in intensive care.",
+                            BadgeDescriptionAr = "معطي الذهب السائل! يساعد تبرعك بالبلازما في توفير العلاجات المنقذة للحياة لمرضى العناية المركزة.",
+                            BadgeKey = "yellow_gold",
+                            BadgeName = "Yellow Gold",
+                            BadgeNameAr = "الذهب الأصفر",
+                            BadgeType = "Action",
+                            BonusPoints = 200,
+                            IconUrl = "badges/yellow_gold.png"
+                        },
+                        new
+                        {
+                            Id = new Guid("c2cdeef5-2b0e-473d-88b6-9de0237e1a03"),
+                            BadgeDescription = "The ultimate trifecta! You have shown outstanding dedication by donating whole blood, platelets, and plasma.",
+                            BadgeDescriptionAr = "العطاء الثلاثي المتكامل! لقد أظهرت تفانياً استثنائياً بالتبرع بالدم الكامل، والصفائح الدموية، والبلازما.",
+                            BadgeKey = "triple_giver",
+                            BadgeName = "The Triple Giver",
+                            BadgeNameAr = "المعطي الثلاثي",
+                            BadgeType = "Action",
+                            BonusPoints = 600,
+                            IconUrl = "badges/triple_giver.png"
+                        },
+                        new
+                        {
+                            Id = new Guid("d2cdeef5-2b0e-473d-88b6-9de0237e1a04"),
+                            BadgeDescription = "A savior without borders! You went the extra mile by donating outside your home district to support another community.",
+                            BadgeDescriptionAr = "منقذ بلا حدود! لقد قطعت مسافة إضافية بالتبرع خارج منطقتك السكنية لدعم مجتمع آخر بحاجة للدم.",
+                            BadgeKey = "traveler_lifesaver",
+                            BadgeName = "Traveler Lifesaver",
+                            BadgeNameAr = "المنقذ المسافر",
+                            BadgeType = "Action",
+                            BonusPoints = 150,
+                            IconUrl = "badges/traveler_lifesaver.png"
+                        },
+                        new
+                        {
+                            Id = new Guid("e2cdeef5-2b0e-473d-88b6-9de0237e1a05"),
+                            BadgeDescription = "Guardian of the weekend! You chose to spend your weekend giving back and ensuring blood is available when it is needed most.",
+                            BadgeDescriptionAr = "بطل عطلة نهاية الأسبوع! لقد اخترت قضاء عطلتك في العطاء وتأمين مخزون الدم للحالات الطارئة.",
+                            BadgeKey = "weekend_hero",
+                            BadgeName = "Weekend Hero",
+                            BadgeNameAr = "بطل عطلة نهاية الأسبوع",
                             BadgeType = "Action",
                             BonusPoints = 100,
-                            IconUrl = "badges/responder.png"
+                            IconUrl = "badges/weekend_hero.png"
                         },
                         new
                         {
-                            Id = new Guid("db1d6774-bf5f-4fdd-aea3-b3865e6a546d"),
-                            BadgeDescription = "Awarded for donors with rare blood type O- or AB-.",
-                            BadgeKey = "golden_blood",
-                            BadgeName = "Golden Blood",
-                            BadgeNameAr = "الدم الذهبي",
+                            Id = new Guid("f2cdeef5-2b0e-473d-88b6-9de0237e1a06"),
+                            BadgeDescription = "Shedding light in the holy month! Your donation during Ramadan brings blessings and hope to families in need.",
+                            BadgeDescriptionAr = "نور يضيء في الشهر الفضيل! تبرعك بالدم خلال شهر رمضان يمنح البركة والأمل للعائلات المحتاجة.",
+                            BadgeKey = "ramadan_light",
+                            BadgeName = "The Ramadan Light",
+                            BadgeNameAr = "نور رمضان",
                             BadgeType = "Action",
-                            BonusPoints = 100,
-                            IconUrl = "badges/golden_blood.png"
+                            BonusPoints = 300,
+                            IconUrl = "badges/ramadan_light.png"
                         },
                         new
                         {
-                            Id = new Guid("7db611c5-b017-48d3-84fb-2273d61938df"),
-                            BadgeDescription = "Awarded after sharing 20 urgent requests.",
-                            BadgeKey = "ambassador",
-                            BadgeName = "Ambassador",
-                            BadgeNameAr = "السفير",
+                            Id = new Guid("02cdeef5-2b0e-473d-88b6-9de0237e1a07"),
+                            BadgeDescription = "Warming hearts in the cold! Your winter donation helps keep blood banks warm and ready during seasonal shortages.",
+                            BadgeDescriptionAr = "دفء القلوب في برد الشتاء! يساعد تبرعك الشتوي في بقاء بنوك الدم مستعدة خلال فترات نقص المخزون الموسمية.",
+                            BadgeKey = "winter_guard",
+                            BadgeName = "Winter Guard",
+                            BadgeNameAr = "حارس الشتاء",
                             BadgeType = "Action",
-                            BonusPoints = 80,
-                            IconUrl = "badges/ambassador.png"
+                            BonusPoints = 200,
+                            IconUrl = "badges/winter_guard.png"
                         },
                         new
                         {
-                            Id = new Guid("e98fa758-1395-4ca1-a17c-51b965ef8f77"),
-                            BadgeDescription = "Awarded for donating after midnight.",
-                            BadgeKey = "night_owl",
-                            BadgeName = "Night Owl",
-                            BadgeNameAr = "بومة الليل",
+                            Id = new Guid("12cdeef5-2b0e-473d-88b6-9de0237e1a08"),
+                            BadgeDescription = "Spreading joy in Eid! Your generous contribution ensures that festive times remain safe for patients undergoing emergency care.",
+                            BadgeDescriptionAr = "ناشر الفرحة في العيد! يضمن تبرعك السخي بقاء أوقات الأعياد آمنة للمرضى الذين يحتاجون لرعاية طارئة.",
+                            BadgeKey = "eid_savior",
+                            BadgeName = "Eid Savior",
+                            BadgeNameAr = "منقذ العيد",
                             BadgeType = "Action",
-                            BonusPoints = 60,
-                            IconUrl = "badges/night_owl.png"
+                            BonusPoints = 250,
+                            IconUrl = "badges/eid_savior.png"
                         });
                 });
 
@@ -762,6 +824,9 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<Guid?>("UrgentBloodAppealId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
                     b.HasIndex("DonationCenterId");
@@ -772,6 +837,8 @@ namespace BloodLineAPI.Infrastructure.Migrations
                     b.HasIndex("DonorId");
 
                     b.HasIndex("HealthPreScreeningId");
+
+                    b.HasIndex("UrgentBloodAppealId");
 
                     b.ToTable("DonationAppointments");
                 });
@@ -2110,11 +2177,18 @@ namespace BloodLineAPI.Infrastructure.Migrations
                         .HasForeignKey("HealthPreScreeningId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("BloodLineAPI.Domain.Entities.UrgentBloodAppeal", "UrgentBloodAppeal")
+                        .WithMany()
+                        .HasForeignKey("UrgentBloodAppealId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("DonationCenter");
 
                     b.Navigation("Donor");
 
                     b.Navigation("HealthPreScreening");
+
+                    b.Navigation("UrgentBloodAppeal");
                 });
 
             modelBuilder.Entity("BloodLineAPI.Domain.Entities.DonationEntities.DonationRating", b =>

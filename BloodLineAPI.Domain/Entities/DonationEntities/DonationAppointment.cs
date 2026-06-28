@@ -24,6 +24,13 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
         public bool SentToLab { get; private set; } = false;
         public Guid? MedicalScreeningId { get; private set; }
         public TimeSpan? CheckInTime { get; private set; }
+        public Guid? UrgentBloodAppealId { get; private set; }
+        public UrgentBloodAppeal? UrgentBloodAppeal { get; private set; }
+
+        public void SetUrgentBloodAppeal(Guid appealId)
+        {
+            UrgentBloodAppealId = appealId;
+        }
 
         public Donor Donor { get; set; } = null!;
         public DonationCenter DonationCenter { get; set; } = null!;
@@ -402,6 +409,12 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                 DonorId,
                 Id,
                 bloodBagId,
+                currentLocalTime));
+
+            AddDomainEvent(new DonationCompletedEvent(
+                DonorId,
+                Id,
+                UrgentBloodAppealId.HasValue,
                 currentLocalTime));
         }
 

@@ -2,10 +2,11 @@ namespace BloodLineAPI.Domain.Enums;
 
 public enum PointActionType
 {
-    ProfileCompletion,
-    RegularDonation,
-    EmergencyDonation,
-    ShareRequest,
-    ReadMedicalInfo,
+    DownloadApp,
+    WholeBloodDonation,
+    PlateletPlasmaDonation,
+    EmergencyResponse,
+    ReadDailyInfo,
+    ShareDailyInfo,
     BadgeBonus
 }

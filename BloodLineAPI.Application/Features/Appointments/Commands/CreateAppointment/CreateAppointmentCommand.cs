@@ -10,7 +10,8 @@ public sealed record CreateAppointmentCommand(
     Guid DonationCenterId,
     DateTime ScheduledDate,
     TimeSpan StartTime,
-    DonationType DonationType) : IRequest<Result<CreateAppointmentResultDto>>
+    DonationType DonationType,
+    Guid? UrgentBloodAppealId = null) : IRequest<Result<CreateAppointmentResultDto>>
 {
     [JsonIgnore]
     public Guid DonorId { get; init; }

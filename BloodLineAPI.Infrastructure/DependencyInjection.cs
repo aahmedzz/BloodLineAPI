@@ -60,10 +60,13 @@ public static class DependencyInjection
         services.AddScoped<ICampaignScheduler, CampaignScheduler>();
         services.AddScoped<IDonorStatusScheduler, DonorStatusScheduler>();
         services.AddScoped<IAppointmentRealignmentScheduler, AppointmentRealignmentScheduler>();
+        services.AddScoped<IEmergencyAppealScheduler, EmergencyAppealScheduler>();
         services.AddScoped<ActivateCampaignJob>();
         services.AddScoped<DeactivateCampaignJob>();
         services.AddScoped<CompleteCampaignJob>();
         services.AddScoped<BloodBagExpiryJob>();
+        services.AddScoped<ResetMonthlyPointsJob>();
+        services.AddScoped<DeactivateUrgentBloodAppealJob>();
 
         services.Configure<AppointmentSettings>(configuration.GetSection("Appointment"));
         services.Configure<BloodBagExpirySettings>(configuration.GetSection("BloodBagExpiry"));

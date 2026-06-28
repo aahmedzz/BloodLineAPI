@@ -21,6 +21,6 @@ public sealed class MonqezBadgeRule(IApplicationDbContext dbContext) : IBadgeRul
             return false;
         }
 
-        return donor.TotalDonationCount + 1 >= 20;
+        return donor.TotalDonationCount + 1 >= 11;
     }
 }

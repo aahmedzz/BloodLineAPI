@@ -60,6 +60,11 @@ if (recurringJobManager is not null)
         "blood-bag-expiry",
         job => job.ExecuteAsync(),
         "0 0 * * *"); // Daily at midnight UTC
+
+    recurringJobManager.AddOrUpdate<ResetMonthlyPointsJob>(
+        "reset-monthly-points",
+        job => job.ExecuteAsync(CancellationToken.None),
+        "0 0 1 * *"); // Monthly at midnight on the 1st
 }
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();

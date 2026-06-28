@@ -6,19 +6,17 @@ using Microsoft.EntityFrameworkCore;
 namespace BloodLineAPI.Application.Features.Gamification.Queries.GetAllTimeLeaderboard;
 
 public sealed class GetAllTimeLeaderboardQueryHandler(IApplicationDbContext dbContext)
-    : IRequestHandler<GetAllTimeLeaderboardQuery, IReadOnlyList<AllTimeLeaderboardEntryDto>>
+    : IRequestHandler<GetAllTimeLeaderboardQuery, AllTimeLeaderboardResponseDto>
 {
-    public async Task<IReadOnlyList<AllTimeLeaderboardEntryDto>> Handle(GetAllTimeLeaderboardQuery request, CancellationToken cancellationToken)
+    public async Task<AllTimeLeaderboardResponseDto> Handle(GetAllTimeLeaderboardQuery request, CancellationToken cancellationToken)
     {
         var top = request.Top <= 0 ? 10 : Math.Min(request.Top, 100);
 
-        var requesterLocation = await dbContext.Donors
+        var requester = await dbContext.Donors
             .AsNoTracking()
-            .Where(d => d.Id == request.RequestingDonorId)
-            .Select(d => new { d.District, d.Area })
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(d => d.Id == request.RequestingDonorId, cancellationToken);
 
-        if (requesterLocation is null)
+        if (requester is null)
         {
             throw new NotFoundException("Donor", request.RequestingDonorId);
         }
@@ -29,22 +27,22 @@ public sealed class GetAllTimeLeaderboardQueryHandler(IApplicationDbContext dbCo
 
         if (request.OnlyMyDistrict)
         {
-            if (string.IsNullOrWhiteSpace(requesterLocation.District))
+            if (string.IsNullOrWhiteSpace(requester.District))
             {
-                return [];
+                return new AllTimeLeaderboardResponseDto([], null);
             }
 
-            query = query.Where(d => d.District == requesterLocation.District);
+            query = query.Where(d => d.District == requester.District);
         }
 
         if (request.OnlyMyArea)
         {
-            if (string.IsNullOrWhiteSpace(requesterLocation.Area))
+            if (string.IsNullOrWhiteSpace(requester.Area))
             {
-                return [];
+                return new AllTimeLeaderboardResponseDto([], null);
             }
 
-            query = query.Where(d => d.Area == requesterLocation.Area);
+            query = query.Where(d => d.Area == requester.Area);
         }
 
         var donors = await query
@@ -54,8 +52,46 @@ public sealed class GetAllTimeLeaderboardQueryHandler(IApplicationDbContext dbCo
             .Select(d => new { d.Id, d.FullName, d.District, d.Area, d.TotalPoints })
             .ToListAsync(cancellationToken);
 
-        return donors
-            .Select((d, index) => new AllTimeLeaderboardEntryDto(d.Id, d.FullName, d.District, d.Area, d.TotalPoints, index + 1))
+        var entries = donors
+            .Select((d, index) => new AllTimeLeaderboardEntryDto(
+                d.Id,
+                d.FullName,
+                d.District,
+                d.Area,
+                d.TotalPoints,
+                index + 1,
+                d.Id == request.RequestingDonorId))
             .ToList();
+
+        // Calculate my rank
+        AllTimeLeaderboardEntryDto? myEntry = null;
+        if (requester.AllowLeaderboardVisibility)
+        {
+            var rankQuery = dbContext.Donors
+                .AsNoTracking()
+                .Where(d => d.AllowLeaderboardVisibility);
+
+            if (request.OnlyMyDistrict && !string.IsNullOrWhiteSpace(requester.District))
+            {
+                rankQuery = rankQuery.Where(d => d.District == requester.District);
+            }
+            if (request.OnlyMyArea && !string.IsNullOrWhiteSpace(requester.Area))
+            {
+                rankQuery = rankQuery.Where(d => d.Area == requester.Area);
+            }
+
+            var myRank = await rankQuery.CountAsync(d => d.TotalPoints > requester.TotalPoints, cancellationToken) + 1;
+
+            myEntry = new AllTimeLeaderboardEntryDto(
+                requester.Id,
+                requester.FullName,
+                requester.District,
+                requester.Area,
+                requester.TotalPoints,
+                myRank,
+                true);
+        }
+
+        return new AllTimeLeaderboardResponseDto(entries, myEntry);
     }
 }

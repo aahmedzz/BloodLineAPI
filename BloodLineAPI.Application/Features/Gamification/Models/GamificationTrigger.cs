@@ -4,6 +4,6 @@ public enum GamificationTrigger
 {
     DonationCompleted,
     ProfileCompleted,
-    RequestShared,
-    MedicalInfoRead
+    DailyInfoRead,
+    DailyInfoShared
 }

@@ -7,4 +7,4 @@ public sealed record GetAllTimeLeaderboardQuery(
     int Top = 10,
     bool OnlyMyDistrict = false,
     bool OnlyMyArea = false)
-    : IRequest<IReadOnlyList<AllTimeLeaderboardEntryDto>>;
+    : IRequest<AllTimeLeaderboardResponseDto>;

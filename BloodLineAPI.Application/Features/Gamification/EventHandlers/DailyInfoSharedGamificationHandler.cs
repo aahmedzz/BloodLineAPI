@@ -5,16 +5,15 @@ using MediatR;
 
 namespace BloodLineAPI.Application.Features.Gamification.EventHandlers;
 
-public sealed class MedicalInfoReadGamificationHandler(IGamificationService gamificationService)
-    : INotificationHandler<MedicalInfoReadEvent>
+public sealed class DailyInfoSharedGamificationHandler(IGamificationService gamificationService)
+    : INotificationHandler<DailyInfoSharedEvent>
 {
-    public async Task Handle(MedicalInfoReadEvent notification, CancellationToken cancellationToken)
+    public async Task Handle(DailyInfoSharedEvent notification, CancellationToken cancellationToken)
     {
         var context = new GamificationContext(
             notification.DonorId,
-            GamificationTrigger.MedicalInfoRead,
-            notification.OccurredOn,
-            MedicalInfoId: notification.MedicalInfoId);
+            GamificationTrigger.DailyInfoShared,
+            notification.OccurredOn);
 
         await gamificationService.ProcessAsync(context, cancellationToken);
     }

@@ -1,0 +1,282 @@
+[
+  {
+    "Id": 1,
+    "TitleEn": "Stay Hydrated",
+    "TitleAr": "حافظ على رطوبتك",
+    "ContentEn": "Drinking plenty of water before and after your donation helps your body recover quickly.",
+    "ContentAr": "شرب الكثير من الماء قبل وبعد التبرع يساعد جسمك على التعافي سريعاً.",
+    "IconName": "water_drop"
+  },
+  {
+    "Id": 2,
+    "TitleEn": "Eat Iron-Rich Foods",
+    "TitleAr": "تناول أطعمة غنية بالحديد",
+    "ContentEn": "Eating foods like spinach, red meat, and beans in the days leading up to donation keeps your iron levels healthy.",
+    "ContentAr": "تناول أطعمة مثل السبانخ واللحوم الحمراء والفاصوليا في الأيام السابقة للتبرع يحافظ على مستويات الحديد لديك.",
+    "IconName": "restaurant"
+  },
+  {
+    "Id": 3,
+    "TitleEn": "Avoid Fatty Foods",
+    "TitleAr": "تجنب الأطعمة الدهنية",
+    "ContentEn": "Avoid fatty foods like fries or burgers before donating; fat in your blood can interfere with test results.",
+    "ContentAr": "تجنب الأطعمة الدهنية مثل البطاطس المقلية أو البرجر قبل التبرع؛ فالدهون في الدم قد تؤثر على نتائج الفحوصات.",
+    "IconName": "no_food"
+  },
+  {
+    "Id": 4,
+    "TitleEn": "Get Good Sleep",
+    "TitleAr": "احصل على نوم جيد",
+    "ContentEn": "Ensure you get a solid 7 to 8 hours of sleep the night before donating to keep your energy levels steady.",
+    "ContentAr": "احرص على النوم لمدة 7 إلى 8 ساعات كاملة في الليلة السابقة للتبرع للحفاظ على استقرار مستويات الطاقة لديك.",
+    "IconName": "bed"
+  },
+  {
+    "Id": 5,
+    "TitleEn": "Wear Comfortable Clothes",
+    "TitleAr": "ارتدِ ملابس مريحة",
+    "ContentEn": "Wear a shirt with sleeves that can be easily rolled up above your elbows for a smooth donation process.",
+    "ContentAr": "ارتدِ قميصاً بأكمام يمكن رفعها بسهولة فوق الكوعين لتسهيل عملية سحب الدم.",
+    "IconName": "checkroom"
+  },
+  {
+    "Id": 6,
+    "TitleEn": "Bring Your ID",
+    "TitleAr": "أحضر بطاقة الهوية",
+    "ContentEn": "Remember to bring your National ID or passport to the donation center; verification is required for safety.",
+    "ContentAr": "تذكر إحضار بطاقتك الشخصية (الرقم القومي) أو جواز السفر إلى مركز التبرع؛ التحقق مطلوب لسلامتك.",
+    "IconName": "badge"
+  },
+  {
+    "Id": 7,
+    "TitleEn": "Resting After Donation",
+    "TitleAr": "الراحة بعد التبرع",
+    "ContentEn": "Rest in the center's recovery area for 10-15 minutes and enjoy a snack before driving or heading out.",
+    "ContentAr": "استرح في منطقة الانتظار بالمركز لمدة 10-15 دقيقة وتناول وجبة خفيفة قبل القيادة أو المغادرة.",
+    "IconName": "airline_seat_recline_normal"
+  },
+  {
+    "Id": 8,
+    "TitleEn": "Keep the Bandage On",
+    "TitleAr": "حافظ على الضمادة",
+    "ContentEn": "Keep the strip bandage on your arm for at least 4 to 5 hours to protect the area and promote healing.",
+    "ContentAr": "حافظ على الضمادة اللاصقة على ذراعك لمدة 4 إلى 5 ساعات على الأقل لحماية موضع الحقنة وتسهيل الالتئام.",
+    "IconName": "healing"
+  },
+  {
+    "Id": 9,
+    "TitleEn": "Avoid Heavy Lifting",
+    "TitleAr": "تجنب حمل الأشياء الثقيلة",
+    "ContentEn": "Avoid heavy lifting or vigorous exercise with your donation arm for the rest of the day.",
+    "ContentAr": "تجنب حمل الأوزان الثقيلة أو ممارسة التمارين العنيفة بالذراع التي تبرعت بها لبقية اليوم.",
+    "IconName": "fitness_center"
+  },
+  {
+    "Id": 10,
+    "TitleEn": "Platelets Regenerate Fast",
+    "TitleAr": "الصفائح الدموية تتجدد سريعاً",
+    "ContentEn": "Platelets are replaced by your body within 72 hours, which is why platelet donations can be done more frequently.",
+    "ContentAr": "يستبدل جسمك الصفائح الدموية في غضون 72 ساعة، ولذلك يمكن التبرع بالصفائح بشكل متكرر أكثر.",
+    "IconName": "speed"
+  },
+  {
+    "Id": 11,
+    "TitleEn": "Plasma Importance",
+    "TitleAr": "أهمية البلازما",
+    "ContentEn": "Plasma is 90% water and is vital for treating burn victims, trauma, and immune disorders.",
+    "ContentAr": "تتكون البلازما من 90% من الماء وهي حيوية لعلاج ضحايا الحروق والصدمات واضطرابات المناعة.",
+    "IconName": "opacity"
+  },
+  {
+    "Id": 12,
+    "TitleEn": "Check Your Eligibility",
+    "TitleAr": "تحقق من أهليتك",
+    "ContentEn": "Ensure you meet the basic weight (min 50kg) and age (18-60) criteria before heading to donate.",
+    "ContentAr": "تأكد من استيفائك للشروط الأساسية مثل الوزن (50 كجم كحد أدنى) والسن (18-60 سنة) قبل التوجه للتبرع.",
+    "IconName": "rule"
+  },
+  {
+    "Id": 13,
+    "TitleEn": "Eat a Hearty Meal",
+    "TitleAr": "تناول وجبة مغذية",
+    "ContentEn": "Eat a healthy meal within 3 to 4 hours of your donation appointment to avoid feeling dizzy.",
+    "ContentAr": "تناول وجبة صحية قبل 3 إلى 4 ساعات من موعد التبرع لتجنب الشعور بالدوار.",
+    "IconName": "cookie"
+  },
+  {
+    "Id": 14,
+    "TitleEn": "Vitamin C Boosts Iron",
+    "TitleAr": "فيتامين سي يعزز الحديد",
+    "ContentEn": "Drinking orange juice or eating citrus fruits helps your body absorb iron more efficiently.",
+    "ContentAr": "تناول عصير البرتقال أو الحمضيات يساعد جسمك على امتصاص الحديد بشكل أكثر كفاءة.",
+    "IconName": "eco"
+  },
+  {
+    "Id": 15,
+    "TitleEn": "Avoid Alcohol",
+    "TitleAr": "تجنب الكحوليات",
+    "ContentEn": "Do not consume alcoholic beverages for 24 hours prior to donation to prevent dehydration.",
+    "ContentAr": "تجنب تناول المشروبات الكحولية قبل 24 ساعة من التبرع لتجنب الجفاف.",
+    "IconName": "local_bar"
+  },
+  {
+    "Id": 16,
+    "TitleEn": "One Bag Saves Three Lives",
+    "TitleAr": "كيس واحد ينقذ ثلاثة",
+    "ContentEn": "A single whole blood donation can be split into red cells, platelets, and plasma, helping up to 3 patients.",
+    "ContentAr": "يمكن تقسيم تبرع واحد بالدم الكامل إلى خلايا حمراء وصفائح دموية وبلازما، مما يساعد ما يصل إلى 3 مرضى.",
+    "IconName": "volunteer_activism"
+  },
+  {
+    "Id": 17,
+    "TitleEn": "Stay Seated if Dizzy",
+    "TitleAr": "اجلس إذا شعرت بالدوار",
+    "ContentEn": "If you feel lightheaded or dizzy after donating, lie down or sit with your head between your knees.",
+    "ContentAr": "إذا شعرت بالدوار بعد التبرع، استلقِ على ظهرك أو اجلس مع وضع رأسك بين ركبتيك.",
+    "IconName": "support"
+  },
+  {
+    "Id": 18,
+    "TitleEn": "Post-Donation Smoking",
+    "TitleAr": "التدخين بعد التبرع",
+    "ContentEn": "Avoid smoking for at least 2 hours after your donation, as it can cause dizziness and fainting.",
+    "ContentAr": "تجنب التدخين لمدة ساعتين على الأقل بعد التبرع، فقد يتسبب ذلك في الدوار والغمى.",
+    "IconName": "smoke_free"
+  },
+  {
+    "Id": 19,
+    "TitleEn": "Invite a Friend",
+    "TitleAr": "دعوة صديق",
+    "ContentEn": "Encouraging a family member or friend to donate with you doubles your positive impact on the community.",
+    "ContentAr": "تشجيع أحد أفراد العائلة أو الأصدقاء على التبرع معك يضاعف أثرك الإيجابي في المجتمع.",
+    "IconName": "group_add"
+  },
+  {
+    "Id": 20,
+    "TitleEn": "Track Your Levels",
+    "TitleAr": "تابع مستوياتك الصحية",
+    "ContentEn": "Monqez saves your blood pressure, hemoglobin, and temperature from every screening so you can monitor your health trends.",
+    "ContentAr": "يحفظ تطبيق منقذ ضغط الدم، والهيموجلوبين، ودرجة الحرارة من كل فحص لتتمكن من مراقبة مؤشراتك الصحية.",
+    "IconName": "monitoring"
+  },
+  {
+    "Id": 21,
+    "TitleEn": "Whole Blood Interval",
+    "TitleAr": "فترة تبرع الدم الكامل",
+    "ContentEn": "Men can donate whole blood every 3 months, and women every 4 months, to ensure safe cell regeneration.",
+    "ContentAr": "يمكن للرجال التبرع بالدم الكامل كل 3 أشهر، وللنساء كل 4 أشهر، لضمان تجديد الخلايا بشكل آمن.",
+    "IconName": "calendar_month"
+  },
+  {
+    "Id": 22,
+    "TitleEn": "Help in Emergency Appeals",
+    "TitleAr": "ساعد في الاستجابة للطوارئ",
+    "ContentEn": "Keep your notifications on so you can reply promptly when a local hospital broadcasts an urgent blood appeal.",
+    "ContentAr": "حافظ على تفعيل التنبيهات لتتمكن من الاستجابة بسرعة عندما يعلن مستشفى محلي عن طلب تبرع عاجل.",
+    "IconName": "notifications_active"
+  },
+  {
+    "Id": 23,
+    "TitleEn": "Keep Warm in Winter",
+    "TitleAr": "التدفئة في الشتاء",
+    "ContentEn": "In winter, keeping your body warm helps blood flow easily during the screening and donation process.",
+    "ContentAr": "في الشتاء، يساعد الحفاظ على دفء جسمك في تدفق الدم بسهولة أثناء عملية الفحص والتبرع.",
+    "IconName": "ac_unit"
+  },
+  {
+    "Id": 24,
+    "TitleEn": "Ramadan Donation Timing",
+    "TitleAr": "توقيت التبرع في رمضان",
+    "ContentEn": "During Ramadan, donating after Iftar is highly recommended to ensure you are well-hydrated and fed.",
+    "ContentAr": "خلال شهر رمضان المبارك، يفضل التبرع بالدم بعد الإفطار للتأكد من شرب السوائل وتناول وجبتك.",
+    "IconName": "dark_mode"
+  },
+  {
+    "Id": 25,
+    "TitleEn": "Rare Blood Types",
+    "TitleAr": "فصائل الدم النادرة",
+    "ContentEn": "Negative blood types (O-, A-, B-, AB-) are highly needed due to their rarity in the population.",
+    "ContentAr": "فصائل الدم السالبة (O-, A-, B-, AB-) مطلوبة بشدة نظراً لندرتها بين السكان.",
+    "IconName": "star"
+  },
+  {
+    "Id": 26,
+    "TitleEn": "Donation in Campaigns",
+    "TitleAr": "التبرع في الحملات",
+    "ContentEn": "Our mobile campaigns go to universities, malls, and streets to make saving lives accessible and easy.",
+    "ContentAr": "تتوجه حملاتنا المتنقلة إلى الجامعات والمراكز التجارية والشوارع لنجعل إنقاذ الأرواح سهلاً ومتاحاً للجميع.",
+    "IconName": "explore"
+  },
+  {
+    "Id": 27,
+    "TitleEn": "Free Medical Checkup",
+    "TitleAr": "فحص طبي مجاني",
+    "ContentEn": "Every donation includes a free screening for blood pressure, pulse, temperature, hemoglobin, and infectious diseases.",
+    "ContentAr": "يتضمن كل تبرع فحصاً مجانياً لضغط الدم، والنبض، والحرارة، والهيموجلوبين، والأمراض المعدية.",
+    "IconName": "health_and_safety"
+  },
+  {
+    "Id": 28,
+    "TitleEn": "Recovering Fluids",
+    "TitleAr": "استعادة السوائل",
+    "ContentEn": "Drink an extra 4 cups of non-alcoholic liquids over the next 24 hours to replace the fluids lost during donation.",
+    "ContentAr": "اشرب 4 أكواب إضافية من السوائل غير الكحولية خلال الـ 24 ساعة القادمة لتعويض السوائل المفقودة.",
+    "IconName": "local_drink"
+  },
+  {
+    "Id": 29,
+    "TitleEn": "Hemoglobin Levels",
+    "TitleAr": "مستويات الهيموجلوبين",
+    "ContentEn": "A safe hemoglobin level (min 12.5 g/dL for women, 13.0 g/dL for men) is verified to ensure your safety.",
+    "ContentAr": "يتم التحقق من نسبة الهيموجلوبين الآمنة (12.5 كحد أدنى للنساء، و 13.0 للرجال) لضمان سلامتك قبل التبرع.",
+    "IconName": "bloodtype"
+  },
+  {
+    "Id": 30,
+    "TitleEn": "Whole Blood vs. Platelets",
+    "TitleAr": "الدم الكامل مقابل الصفائح",
+    "ContentEn": "While whole blood takes 10 minutes to donate, platelet apheresis takes about an hour but helps cancer patients directly.",
+    "ContentAr": "بينما يستغرق التبرع بالدم الكامل 10 دقائق، يستغرق تبرع الصفائح ساعة تقريباً ولكنه يساعد مرضى السرطان مباشرة.",
+    "IconName": "schedule"
+  },
+  {
+    "Id": 31,
+    "TitleEn": "The Power of O-Negative",
+    "TitleAr": "قوة فصيلة O-سالب",
+    "ContentEn": "O-negative blood is the universal donor type and can be given to patients of any blood group in emergencies.",
+    "ContentAr": "تعتبر فصيلة O-سالبة هي المتبرع العام ويمكن إعطاؤها لجميع الفصائل في حالات الطوارئ القصوى.",
+    "IconName": "help"
+  },
+  {
+    "Id": 32,
+    "TitleEn": "Relax During Donation",
+    "TitleAr": "استرخِ أثناء التبرع",
+    "ContentEn": "Taking deep breaths or chatting with our friendly staff can help you relax and make the time pass quickly.",
+    "ContentAr": "أخذ نفس عميق أو التحدث مع موظفينا اللطفاء يمكن أن يساعدك على الاسترخاء ويمر الوقت سريعاً.",
+    "IconName": "sentiment_satisfied"
+  },
+  {
+    "Id": 33,
+    "TitleEn": "Eat Snacks",
+    "TitleAr": "تناول المقرمشات",
+    "ContentEn": "Accept snacks and juice offered at the center; they are essential to kickstart your recovery.",
+    "ContentAr": "اقبل الوجبات الخفيفة والعصير المقدمة في المركز؛ فهي أساسية لبدء استعادة حيويتك.",
+    "IconName": "bakery_dining"
+  },
+  {
+    "Id": 34,
+    "TitleEn": "Donation in Summer",
+    "TitleAr": "التبرع في الصيف",
+    "ContentEn": "In hot summer days, make sure to drink cool water and avoid direct sun exposure after your donation.",
+    "ContentAr": "في أيام الصيف الحارة، تأكد من شرب الماء البارد وتجنب التعرض المباشر لأشعة الشمس بعد التبرع.",
+    "IconName": "wb_sunny"
+  },
+  {
+    "Id": 35,
+    "TitleEn": "Thank You Savior!",
+    "TitleAr": "شكراً لك يا منقذ!",
+    "ContentEn": "Your single act of generosity helps fill hospital banks and keeps families together. You are a hero!",
+    "ContentAr": "عملك النبيل يساعد في سد العجز ببنوك الدم في المستشفيات ويحمي العائلات. أنت بطل حقيقي!",
+    "IconName": "emoji_events"
+  }
+]

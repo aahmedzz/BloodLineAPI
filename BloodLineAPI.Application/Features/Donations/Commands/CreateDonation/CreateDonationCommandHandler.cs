@@ -153,6 +153,39 @@ public sealed class CreateDonationCommandHandler(
             currentLocalTime: localNow
         );
 
+        var fortyEightHoursAgo = dateTimeProvider.UtcNow.AddDays(-2);
+
+        var latestEmergencyNotification = await dbContext.Notifications
+            .AsNoTracking()
+            .Where(n => n.UserId == donor.Id &&
+                        n.Type == NotificationType.UrgentBloodAppeal &&
+                        n.SentDate >= fortyEightHoursAgo)
+            .OrderByDescending(n => n.SentDate)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (latestEmergencyNotification != null && !string.IsNullOrEmpty(latestEmergencyNotification.ActionPayload))
+        {
+            try
+            {
+                using var jsonDoc = System.Text.Json.JsonDocument.Parse(latestEmergencyNotification.ActionPayload);
+                if (jsonDoc.RootElement.TryGetProperty("targetId", out var targetIdProp) &&
+                    Guid.TryParse(targetIdProp.GetString(), out var appealId))
+                {
+                    var isActiveAppeal = await dbContext.UrgentBloodAppeals
+                        .AnyAsync(uba => uba.Id == appealId && uba.IsActive, cancellationToken);
+
+                    if (isActiveAppeal)
+                    {
+                        appointment.SetUrgentBloodAppeal(appealId);
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore JSON parsing errors and proceed
+            }
+        }
+
         await dbContext.DonationAppointments.AddAsync(appointment, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 

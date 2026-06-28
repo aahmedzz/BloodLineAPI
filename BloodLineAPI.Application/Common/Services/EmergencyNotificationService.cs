@@ -16,7 +16,9 @@ public class EmergencyNotificationService(
     IApplicationDbContext dbContext,
     INotificationService notificationService,
     IDonorEligibilityService eligibilityService,
-    IDateTimeProvider dateTimeProvider)
+    IDateTimeProvider dateTimeProvider,
+    ICurrentUserService currentUserService,
+    IEmergencyAppealScheduler appealScheduler)
     : IEmergencyNotificationService
 {
     public async Task<Result<SendBulkNotificationResultDto>> SendBulkEmergencyNotificationAsync(
@@ -94,9 +96,63 @@ public class EmergencyNotificationService(
             ));
         }
 
+        // Create an UrgentBloodAppeal record in the database
+        var currentUserIdStr = currentUserService.UserId;
+        var currentStaffId = Guid.Empty;
+        if (!string.IsNullOrEmpty(currentUserIdStr))
+        {
+            currentStaffId = Guid.Parse(currentUserIdStr);
+        }
+
+        var targetedBloodTypeIds = eligibleDonorsToSend
+            .Where(d => d.BloodTypeId.HasValue)
+            .Select(d => d.BloodTypeId!.Value)
+            .Distinct()
+            .ToList();
+
+        var targetedDistricts = eligibleDonorsToSend
+            .Where(d => !string.IsNullOrEmpty(d.District))
+            .Select(d => d.District!)
+            .Distinct()
+            .ToList();
+
+        var targetDistrict = targetedDistricts.FirstOrDefault() ?? "Beni Suef";
+
+        var appeal = new UrgentBloodAppeal
+        {
+            Id = Guid.NewGuid(),
+            CreatedByStaffId = currentStaffId,
+            Title = "🚨 طلب تبرع دم عاجل",
+            Description = message,
+            TargetDistrict = targetDistrict,
+            TargetBagsNeeded = eligibleDonorsToSend.Count,
+            CurrentBagsCollected = 0,
+            IsActive = true,
+            BroadcastDate = dateTimeProvider.UtcNow
+        };
+
+        var targetedBloodTypes = await dbContext.BloodTypes
+            .Where(bt => targetedBloodTypeIds.Contains(bt.Id))
+            .ToListAsync(cancellationToken);
+
+        foreach (var bt in targetedBloodTypes)
+        {
+            appeal.TargetedBloodTypes.Add(bt);
+        }
+
+        dbContext.UrgentBloodAppeals.Add(appeal);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        appealScheduler.ScheduleDeactivation(appeal.Id, TimeSpan.FromDays(2));
+
         // 4. Send notifications via NotificationService (handles DB audit + FCM dispatch)
         var title = "🚨 طلب تبرع دم عاجل";
         var sentCount = 0;
+        var payload = new Dictionary<string, string>
+        {
+            { "targetEntity", "UrgentBloodAppeal" },
+            { "targetId", appeal.Id.ToString() }
+        };
 
         foreach (var donor in eligibleDonorsToSend)
         {
@@ -107,6 +163,7 @@ public class EmergencyNotificationService(
                     title,
                     message,
                     NotificationType.UrgentBloodAppeal,
+                    payload,
                     cancellationToken: cancellationToken);
                 sentCount++;
             }

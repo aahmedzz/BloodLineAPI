@@ -10,4 +10,9 @@ public sealed record BadgeListItemDto(
     string BadgeDescription,
     string IconUrl,
     BadgeType BadgeType,
-    int BonusPoints);
+    int BonusPoints,
+    bool IsProgressive,
+    string Status, // "Unlocked", "InProgress", "Locked"
+    int CurrentProgress,
+    int TargetProgress,
+    DateTime? UnlockedDate);

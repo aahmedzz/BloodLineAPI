@@ -7,4 +7,4 @@ public sealed record GetMonthlyLeaderboardQuery(
     int Top = 10,
     bool OnlyMyDistrict = false,
     bool OnlyMyArea = false)
-    : IRequest<IReadOnlyList<MonthlyLeaderboardEntryDto>>;
+    : IRequest<MonthlyLeaderboardResponseDto>;

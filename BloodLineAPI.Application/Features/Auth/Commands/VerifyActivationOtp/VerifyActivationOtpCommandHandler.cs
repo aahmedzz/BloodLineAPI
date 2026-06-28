@@ -49,6 +49,7 @@ public sealed class VerifyActivationOtpCommandHandler(
         if (!donor.IsRegistrationCompleted)
         {
             donor.IsRegistrationCompleted = true;
+            donor.AddDomainEvent(new BloodLineAPI.Domain.Events.ProfileCompletedEvent(donor.Id, DateTime.UtcNow));
         }
 
         // Save both User changes and Donor changes

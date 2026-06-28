@@ -6,4 +6,5 @@ public sealed record MonthlyLeaderboardEntryDto(
     string? District,
     string? Area,
     int Points,
-    int Rank);
+    int Rank,
+    bool IsCurrentUser);

@@ -7,6 +7,7 @@ public enum NotificationType
     AppointmentConfirmed,
     AppointmentCancelled,
     BadgeEarned,
+    PointsEarned,
     RateDonationCenter,
     DonationCompleted,
     UrgentBloodAppeal,
