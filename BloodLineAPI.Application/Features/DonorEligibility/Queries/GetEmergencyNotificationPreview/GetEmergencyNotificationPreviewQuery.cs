@@ -4,10 +4,10 @@ using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Application.Features.DonorEligibility.Dtos;
 using MediatR;
 
-namespace BloodLineAPI.Application.Features.DonorEligibility.Commands.SendEmergencyNotifications;
+namespace BloodLineAPI.Application.Features.DonorEligibility.Queries.GetEmergencyNotificationPreview;
 
-public record SendEmergencyNotificationsCommand(
+public record GetEmergencyNotificationPreviewQuery(
     string? SelectionMode,
     List<Guid>? DonorIds,
     DonorEligibilityFiltersDto? Filters,
-    List<Guid>? ExcludedDonorIds) : IRequest<Result<SendBulkNotificationResultDto>>;
+    List<Guid>? ExcludedDonorIds) : IRequest<Result<NotificationPreviewResponseDto>>;

@@ -36,88 +36,17 @@ public sealed class GetEligibleDonorsQueryHandler(
             .Include(d => d.User)
             .AsQueryable();
 
-        // 1. Search Filter (Name, Phone, NationalId, DonorCode)
-        if (!string.IsNullOrWhiteSpace(request.Search))
+        var filters = new DonorEligibilityFiltersDto
         {
-            var search = request.Search.Trim();
-            query = query.Where(d =>
-                d.FirstName.Contains(search) ||
-                d.SecondName.Contains(search) ||
-                d.ThirdName.Contains(search) ||
-                (d.FourthName != null && d.FourthName.Contains(search)) ||
-                (d.FirstName + " " + d.SecondName + " " + d.ThirdName + " " + (d.FourthName ?? "")).Contains(search) ||
-                d.PhoneNumber.Contains(search) ||
-                d.NationalId.Contains(search) ||
-                d.DonorCode.Contains(search));
-        }
+            Search = request.Search,
+            BloodType = request.BloodType,
+            Status = request.Status,
+            District = request.District,
+            Gender = request.Gender,
+            HasMobileApp = request.HasMobileApp
+        };
 
-        // 2. Blood Type Filter (e.g., "A+", "O-")
-        if (!string.IsNullOrWhiteSpace(request.BloodType))
-        {
-            var bloodTypeStr = request.BloodType.Trim().ToUpperInvariant();
-            var hasSign = bloodTypeStr.EndsWith('+') || bloodTypeStr.EndsWith('-');
-            if (hasSign)
-            {
-                var groupStr = bloodTypeStr[..^1];
-                var sign = bloodTypeStr[^1];
-                if (Enum.TryParse<BloodGroupName>(groupStr, true, out var groupName))
-                {
-                    var rhFactor = sign == '+' ? RhFactor.Positive : RhFactor.Negative;
-                    query = query.Where(d => d.BloodType != null && d.BloodType.BloodGroupName == groupName && d.BloodType.RhFactor == rhFactor);
-                }
-            }
-        }
-
-        // 2.1. District Filter
-        if (!string.IsNullOrWhiteSpace(request.District))
-        {
-            var dist = request.District.Trim();
-            query = query.Where(d => d.District != null && d.District.Contains(dist));
-        }
-
-        // 2.2. Gender Filter
-        if (!string.IsNullOrWhiteSpace(request.Gender))
-        {
-            if (Enum.TryParse<Gender>(request.Gender, true, out var genderEnum))
-            {
-                query = query.Where(d => d.Gender == genderEnum);
-            }
-        }
-
-        // 3. Status Filter (translates logic to database query to paginate/filter cleanly)
-        if (!string.IsNullOrWhiteSpace(request.Status))
-        {
-            var statusLower = request.Status.Trim().ToLowerInvariant();
-            switch (statusLower)
-            {
-                case "ineligible":
-                    query = query.Where(d => d.Status == DonorStatus.Ineligible);
-                    break;
-
-                case "deferred":
-                    query = query.Where(d => d.Status == DonorStatus.Deferred);
-                    break;
-
-                case "eligible":
-                    query = query.Where(d => d.Status == DonorStatus.Eligible &&
-                        (d.LastDonationDate == null ||
-                         d.LastDonationDate.Value.AddDays(d.Gender == Gender.Male ? maleDays : femaleDays) <= todayLocal));
-                    break;
-
-                case "soon":
-                    query = query.Where(d => d.Status == DonorStatus.Eligible &&
-                        d.LastDonationDate != null &&
-                        d.LastDonationDate.Value.AddDays(d.Gender == Gender.Male ? maleDays : femaleDays) > todayLocal &&
-                        d.LastDonationDate.Value.AddDays(d.Gender == Gender.Male ? maleDays - 14 : femaleDays - 14) <= todayLocal);
-                    break;
-
-                case "not_yet":
-                    query = query.Where(d => d.Status == DonorStatus.Eligible &&
-                        d.LastDonationDate != null &&
-                        d.LastDonationDate.Value.AddDays(d.Gender == Gender.Male ? maleDays - 14 : femaleDays - 14) > todayLocal);
-                    break;
-            }
-        }
+        query = await eligibilityService.FilterDonorsAsync(query, filters, cancellationToken);
 
         // 4. Counts and pagination bounds
         var total = await query.CountAsync(cancellationToken);

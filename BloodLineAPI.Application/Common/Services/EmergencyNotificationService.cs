@@ -6,8 +6,11 @@ using System.Threading.Tasks;
 using BloodLineAPI.Application.Common.Interfaces;
 using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Domain.Entities;
+using BloodLineAPI.Domain.Entities.BloodEntities;
 using BloodLineAPI.Domain.Enums;
 using BloodLineAPI.Application.Features.DonorEligibility.Dtos;
+using BloodLineAPI.Application.Features.DonorEligibility.Commands.SendEmergencyNotifications;
+using BloodLineAPI.Application.Features.DonorEligibility.Queries.GetEmergencyNotificationPreview;
 using Microsoft.EntityFrameworkCore;
 
 namespace BloodLineAPI.Application.Common.Services;
@@ -21,36 +24,86 @@ public class EmergencyNotificationService(
     IEmergencyAppealScheduler appealScheduler)
     : IEmergencyNotificationService
 {
-    public async Task<Result<SendBulkNotificationResultDto>> SendBulkEmergencyNotificationAsync(
-        List<Guid> donorIds,
-        string message,
-        CancellationToken cancellationToken = default)
+    private async Task<(
+        List<Donor> EligibleDonors, 
+        List<BloodType> TargetedBloodTypes, 
+        string Title, 
+        string Message, 
+        int RequestedCount, 
+        List<Guid> FailedDonorIds)> ResolveNotificationDetailsAsync(
+            string? selectionMode,
+            List<Guid>? donorIds,
+            DonorEligibilityFiltersDto? filters,
+            List<Guid>? excludedDonorIds,
+            CancellationToken cancellationToken)
     {
-        var requestedCount = donorIds.Count;
+        List<Guid> targetDonorIds;
+        var isFilteredMode = selectionMode != null && 
+                             selectionMode.Equals("filtered", StringComparison.OrdinalIgnoreCase);
+
+        if (isFilteredMode)
+        {
+            if (filters == null)
+            {
+                throw new ArgumentException("Filters are required in filtered mode.");
+            }
+
+            // Apply eligibility filters using our shared pipeline
+            var query = dbContext.Donors
+                .Include(d => d.BloodType)
+                .Include(d => d.User)
+                .AsQueryable();
+
+            query = await eligibilityService.FilterDonorsAsync(query, filters, cancellationToken);
+
+            // Exclude the specified donor IDs
+            var excludedIds = excludedDonorIds ?? new List<Guid>();
+            if (excludedIds.Any())
+            {
+                query = query.Where(d => !excludedIds.Contains(d.Id));
+            }
+
+            // Get the list of matching donor IDs
+            targetDonorIds = await query.Select(d => d.Id).ToListAsync(cancellationToken);
+        }
+        else
+        {
+            targetDonorIds = donorIds ?? new List<Guid>();
+        }
+
+        var requestedCount = targetDonorIds.Count;
         var failedDonorIds = new List<Guid>();
         var eligibleDonorsToSend = new List<Donor>();
+
+        if (requestedCount == 0)
+        {
+            return (eligibleDonorsToSend, new List<BloodType>(), "🚨 فرصة للمساعدة في إنقاذ حياة", "🚨 فرصة لإنقاذ حياة: هناك حاجة لمتبرعين بالدم حالياً لدعم المرضى المحتاجين.", 0, failedDonorIds);
+        }
 
         // 1. Fetch requested donors
         var donors = await dbContext.Donors
             .Include(d => d.BloodType)
             .Include(d => d.User)
-            .Where(d => donorIds.Contains(d.Id))
+            .Where(d => targetDonorIds.Contains(d.Id))
             .ToListAsync(cancellationToken);
 
         // Find missing donor IDs
-        var foundDonorIds = donors.Select(d => d.Id).ToHashSet();
-        foreach (var requestedId in donorIds)
+        if (!isFilteredMode)
         {
-            if (!foundDonorIds.Contains(requestedId))
+            var foundDonorIds = donors.Select(d => d.Id).ToHashSet();
+            foreach (var requestedId in targetDonorIds)
             {
-                failedDonorIds.Add(requestedId);
+                if (!foundDonorIds.Contains(requestedId))
+                {
+                    failedDonorIds.Add(requestedId);
+                }
             }
         }
 
         // 2. Batch query rate limits (max 1 notification per donor per 24 hours)
         var twentyFourHoursAgo = dateTimeProvider.UtcNow.AddDays(-1);
         var recentNotificationsMap = await dbContext.Notifications
-            .Where(n => donorIds.Contains(n.UserId) && n.SentDate >= twentyFourHoursAgo && n.Type == NotificationType.UrgentBloodAppeal)
+            .Where(n => targetDonorIds.Contains(n.UserId) && n.SentDate >= twentyFourHoursAgo && n.Type == NotificationType.UrgentBloodAppeal)
             .GroupBy(n => n.UserId)
             .Select(g => new { UserId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
@@ -83,16 +136,62 @@ public class EmergencyNotificationService(
                 continue;
             }
 
+            // Remove Donors without App Accounts
+            if (donor.User == null || donor.User.PasswordHash == null)
+            {
+                failedDonorIds.Add(donor.Id);
+                continue;
+            }
+
             eligibleDonorsToSend.Add(donor);
         }
 
         if (eligibleDonorsToSend.Count == 0)
         {
+            return (eligibleDonorsToSend, new List<BloodType>(), "🚨 فرصة للمساعدة في إنقاذ حياة", "🚨 فرصة لإنقاذ حياة: هناك حاجة لمتبرعين بالدم حالياً لدعم المرضى المحتاجين.", requestedCount, failedDonorIds);
+        }
+
+        var targetedBloodTypeIds = eligibleDonorsToSend
+            .Where(d => d.BloodTypeId.HasValue)
+            .Select(d => d.BloodTypeId!.Value)
+            .Distinct()
+            .ToList();
+
+        var targetedBloodTypes = await dbContext.BloodTypes
+            .Where(bt => targetedBloodTypeIds.Contains(bt.Id))
+            .ToListAsync(cancellationToken);
+
+        var targetedBloodTypesStr = targetedBloodTypes.Any()
+            ? string.Join(", ", targetedBloodTypes.Select(bt => bt.FullDisplayname))
+            : string.Empty;
+
+        // Title and message - constructed on the backend with encouraging, panic-free text
+        var title = "🚨 فرصة للمساعدة في إنقاذ حياة";
+        var message = targetedBloodTypes.Any()
+            ? $"🚨 فرصة لإنقاذ حياة: فصيلتك الدموية ({targetedBloodTypesStr}) مطلوبة حالياً لدعم حالات بحاجة للتبرع بالدم. تبرعك قد يكون سبباً في إدخال الفرحة والشفاء على قلب مريض وعائلته. نسعد بزيارتك لأقرب مركز تبرع."
+            : "🚨 فرصة لإنقاذ حياة: هناك حاجة لمتبرعين بالدم حالياً لدعم المرضى المحتاجين. تبرعك قد يكون سبباً في إدخال الفرحة والشفاء على قلب مريض وعائلته. نسعد بزيارتك لأقرب مركز تبرع.";
+
+        return (eligibleDonorsToSend, targetedBloodTypes, title, message, requestedCount, failedDonorIds);
+    }
+
+    public async Task<Result<SendBulkNotificationResultDto>> SendBulkEmergencyNotificationAsync(
+        SendEmergencyNotificationsCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var resolved = await ResolveNotificationDetailsAsync(
+            command.SelectionMode,
+            command.DonorIds,
+            command.Filters,
+            command.ExcludedDonorIds,
+            cancellationToken);
+
+        if (resolved.EligibleDonors.Count == 0)
+        {
             return Result<SendBulkNotificationResultDto>.Success(new SendBulkNotificationResultDto(
-                Requested: requestedCount,
+                Requested: resolved.RequestedCount,
                 Sent: 0,
-                Failed: failedDonorIds.Count,
-                FailedDonorIds: failedDonorIds
+                Failed: resolved.FailedDonorIds.Count,
+                FailedDonorIds: resolved.FailedDonorIds
             ));
         }
 
@@ -104,13 +203,7 @@ public class EmergencyNotificationService(
             currentStaffId = Guid.Parse(currentUserIdStr);
         }
 
-        var targetedBloodTypeIds = eligibleDonorsToSend
-            .Where(d => d.BloodTypeId.HasValue)
-            .Select(d => d.BloodTypeId!.Value)
-            .Distinct()
-            .ToList();
-
-        var targetedDistricts = eligibleDonorsToSend
+        var targetedDistricts = resolved.EligibleDonors
             .Where(d => !string.IsNullOrEmpty(d.District))
             .Select(d => d.District!)
             .Distinct()
@@ -122,20 +215,16 @@ public class EmergencyNotificationService(
         {
             Id = Guid.NewGuid(),
             CreatedByStaffId = currentStaffId,
-            Title = "🚨 طلب تبرع دم عاجل",
-            Description = message,
+            Title = resolved.Title,
+            Description = resolved.Message,
             TargetDistrict = targetDistrict,
-            TargetBagsNeeded = eligibleDonorsToSend.Count,
+            TargetBagsNeeded = resolved.EligibleDonors.Count,
             CurrentBagsCollected = 0,
             IsActive = true,
             BroadcastDate = dateTimeProvider.UtcNow
         };
 
-        var targetedBloodTypes = await dbContext.BloodTypes
-            .Where(bt => targetedBloodTypeIds.Contains(bt.Id))
-            .ToListAsync(cancellationToken);
-
-        foreach (var bt in targetedBloodTypes)
+        foreach (var bt in resolved.TargetedBloodTypes)
         {
             appeal.TargetedBloodTypes.Add(bt);
         }
@@ -146,22 +235,22 @@ public class EmergencyNotificationService(
         appealScheduler.ScheduleDeactivation(appeal.Id, TimeSpan.FromDays(2));
 
         // 4. Send notifications via NotificationService (handles DB audit + FCM dispatch)
-        var title = "🚨 طلب تبرع دم عاجل";
         var sentCount = 0;
+        var failedDonorIds = new List<Guid>(resolved.FailedDonorIds);
         var payload = new Dictionary<string, string>
         {
             { "targetEntity", "UrgentBloodAppeal" },
             { "targetId", appeal.Id.ToString() }
         };
 
-        foreach (var donor in eligibleDonorsToSend)
+        foreach (var donor in resolved.EligibleDonors)
         {
             try
             {
                 await notificationService.SendNotificationAsync(
                     donor.Id,
-                    title,
-                    message,
+                    resolved.Title,
+                    resolved.Message,
                     NotificationType.UrgentBloodAppeal,
                     payload,
                     cancellationToken: cancellationToken);
@@ -174,13 +263,33 @@ public class EmergencyNotificationService(
         }
 
         var resultDto = new SendBulkNotificationResultDto(
-            Requested: requestedCount,
+            Requested: resolved.RequestedCount,
             Sent: sentCount,
             Failed: failedDonorIds.Count,
             FailedDonorIds: failedDonorIds
         );
 
         return Result<SendBulkNotificationResultDto>.Success(resultDto);
+    }
+
+    public async Task<Result<NotificationPreviewResponseDto>> GetEmergencyNotificationPreviewAsync(
+        GetEmergencyNotificationPreviewQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var resolved = await ResolveNotificationDetailsAsync(
+            query.SelectionMode,
+            query.DonorIds,
+            query.Filters,
+            query.ExcludedDonorIds,
+            cancellationToken);
+
+        var preview = new NotificationPreviewResponseDto(
+            Title: resolved.Title,
+            Message: resolved.Message,
+            RecipientCount: resolved.EligibleDonors.Count
+        );
+
+        return Result<NotificationPreviewResponseDto>.Success(preview);
     }
 
     private static string MapEligibilityStatus(Donor donor, DonorEligibilityResult? eligibility)

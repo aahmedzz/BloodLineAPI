@@ -22,8 +22,7 @@ public sealed class SendEmergencyNotificationsCommandHandler(
         CancellationToken cancellationToken)
     {
         return await emergencyNotificationService.SendBulkEmergencyNotificationAsync(
-            request.DonorIds,
-            request.Message,
+            request,
             cancellationToken);
     }
 }

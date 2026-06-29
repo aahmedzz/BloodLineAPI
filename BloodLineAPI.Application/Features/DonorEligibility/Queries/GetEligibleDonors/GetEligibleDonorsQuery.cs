@@ -11,4 +11,5 @@ public record GetEligibleDonorsQuery(
     string? BloodType = null,
     string? Status = null,
     string? District = null,
-    string? Gender = null) : IRequest<Result<PaginatedEligibilityResult>>;
+    string? Gender = null,
+    bool? HasMobileApp = null) : IRequest<Result<PaginatedEligibilityResult>>;

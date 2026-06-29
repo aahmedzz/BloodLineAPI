@@ -1,5 +1,8 @@
 using BloodLineAPI.Application.Common.Models;
+using BloodLineAPI.Application.Features.DonorEligibility.Dtos;
+using BloodLineAPI.Domain.Entities;
 using BloodLineAPI.Domain.Enums;
+using System.Linq;
 
 namespace BloodLineAPI.Application.Common.Interfaces;
 
@@ -20,6 +23,11 @@ public interface IDonorEligibilityService
     Task<Result<DonorEligibilityResult>> CheckEligibilityAsync(
         Guid donorId,
         DonationType donationType,
+        CancellationToken cancellationToken = default);
+
+    Task<IQueryable<Donor>> FilterDonorsAsync(
+        IQueryable<Donor> query,
+        DonorEligibilityFiltersDto filters,
         CancellationToken cancellationToken = default);
 }
 

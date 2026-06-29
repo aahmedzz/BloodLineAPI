@@ -1,11 +1,11 @@
 using FluentValidation;
 using System;
 
-namespace BloodLineAPI.Application.Features.DonorEligibility.Commands.SendEmergencyNotifications;
+namespace BloodLineAPI.Application.Features.DonorEligibility.Queries.GetEmergencyNotificationPreview;
 
-public class SendEmergencyNotificationsCommandValidator : AbstractValidator<SendEmergencyNotificationsCommand>
+public class GetEmergencyNotificationPreviewQueryValidator : AbstractValidator<GetEmergencyNotificationPreviewQuery>
 {
-    public SendEmergencyNotificationsCommandValidator()
+    public GetEmergencyNotificationPreviewQueryValidator()
     {
         RuleFor(x => x.SelectionMode)
             .Must(mode => string.IsNullOrEmpty(mode) || 
@@ -19,7 +19,7 @@ public class SendEmergencyNotificationsCommandValidator : AbstractValidator<Send
             RuleFor(x => x.DonorIds)
                 .NotEmpty().WithMessage("DonorIds is required in selected mode.")
                 .Must(list => list != null && list.Count > 0).WithMessage("At least one donor must be selected.")
-                .Must(list => list != null && list.Count <= 50).WithMessage("Cannot send to more than 50 donors at once in selected mode.");
+                .Must(list => list != null && list.Count <= 50).WithMessage("Cannot request preview for more than 50 donors at once in selected mode.");
 
             RuleFor(x => x.Filters)
                 .Null().WithMessage("Filters must not be present in selected mode.");

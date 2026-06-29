@@ -4,6 +4,7 @@ using BloodLineAPI.Application.Features.DonorEligibility.Dtos;
 using BloodLineAPI.Application.Features.DonorEligibility.Queries.GetEligibleDonors;
 using BloodLineAPI.Application.Features.DonorEligibility.Queries.GetEligibilityStats;
 using BloodLineAPI.Application.Features.DonorEligibility.Commands.SendEmergencyNotifications;
+using BloodLineAPI.Application.Features.DonorEligibility.Queries.GetEmergencyNotificationPreview;
 using BloodLineAPI.Attributes;
 using BloodLineAPI.Domain.Enums;
 using MediatR;
@@ -12,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,9 +42,10 @@ public class DonorEligibilityController(ISender sender) : ControllerBase
         [FromQuery] string? status = null,
         [FromQuery] string? district = null,
         [FromQuery] string? gender = null,
+        [FromQuery] bool? hasMobileApp = null,
         CancellationToken cancellationToken = default)
     {
-        var query = new GetEligibleDonorsQuery(page, limit, search, bloodType, status, district, gender);
+        var query = new GetEligibleDonorsQuery(page, limit, search, bloodType, status, district, gender, hasMobileApp);
         var result = await sender.Send(query, cancellationToken);
         if (!result.IsSuccess)
         {
@@ -84,7 +87,11 @@ public class DonorEligibilityController(ISender sender) : ControllerBase
         [FromBody] SendNotificationRequest request,
         CancellationToken cancellationToken = default)
     {
-        var command = new SendEmergencyNotificationsCommand(request.DonorIds, request.Type, request.Message);
+        var command = new SendEmergencyNotificationsCommand(
+            request.SelectionMode,
+            request.DonorIds,
+            request.Filters,
+            request.ExcludedDonorIds);
         var result = await sender.Send(command, cancellationToken);
         if (!result.IsSuccess)
         {
@@ -94,6 +101,45 @@ public class DonorEligibilityController(ISender sender) : ControllerBase
         // Return 202 Accepted per requirements
         return Accepted(ApiResponse<SendBulkNotificationResultDto>.Ok(result.Data!, "Notifications processed successfully."));
     }
+
+    /// <summary>
+    /// Preview the emergency notification title, message, and target recipient count (Doctor role).
+    /// </summary>
+    [HttpPost("notifications/preview")]
+    [Authorize(Roles = "Doctor")]
+    [ProducesResponseType(typeof(ApiResponse<NotificationPreviewResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetEmergencyNotificationPreview(
+        [FromBody] SendNotificationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new GetEmergencyNotificationPreviewQuery(
+            request.SelectionMode,
+            request.DonorIds,
+            request.Filters,
+            request.ExcludedDonorIds);
+        var result = await sender.Send(query, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(ApiResponse<object>.Fail(result.Error ?? "Failed to generate notification preview."));
+        }
+
+        return Ok(ApiResponse<NotificationPreviewResponseDto>.Ok(result.Data!, "Notification preview generated successfully."));
+    }
 }
 
-public record SendNotificationRequest(List<Guid> DonorIds, string Type, string Message);
+public class SendNotificationRequest
+{
+    [JsonPropertyName("selectionMode")]
+    public string? SelectionMode { get; set; }
+
+    [JsonPropertyName("donorIds")]
+    public List<Guid>? DonorIds { get; set; }
+
+    [JsonPropertyName("filters")]
+    public DonorEligibilityFiltersDto? Filters { get; set; }
+
+    [JsonPropertyName("excludedDonorIds")]
+    public List<Guid>? ExcludedDonorIds { get; set; }
+}
