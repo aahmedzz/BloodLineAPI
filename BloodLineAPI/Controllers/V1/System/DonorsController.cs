@@ -4,6 +4,7 @@ using BloodLineAPI.Application.Features.Donors.Queries.GetFilteredDonors;
 using BloodLineAPI.Application.Features.Donors.Queries.GetDonorById;
 using BloodLineAPI.Application.Features.Donors.Queries.SearchDonorByNationalId;
 using BloodLineAPI.Application.Features.Donors.Commands.UpdateDonor;
+using BloodLineAPI.Application.Features.Gamification.Commands.ReconcileBadges;
 using BloodLineAPI.Attributes;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -122,6 +123,25 @@ public class DonorsController(ISender sender) : ControllerBase
         }
 
         return Ok(ApiResponse<FilteredDonorDto>.Ok(result.Data!, "Success"));
+    }
+
+    /// <summary>
+    /// Reconcile badges and XP for all donors (Admin only).
+    /// </summary>
+    [HttpPost("reconcile-badges")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<ReconcileBadgesResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ReconcileBadges(CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new ReconcileBadgesCommand(), cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
+        }
+
+        return Ok(ApiResponse<ReconcileBadgesResultDto>.Ok(result.Data!, "Badges and XP reconciled successfully."));
     }
 }
 
