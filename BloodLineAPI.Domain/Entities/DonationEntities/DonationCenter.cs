@@ -43,6 +43,7 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
         public ICollection<DonationAppointment> DonationAppointments { get; set; } = new List<DonationAppointment>();
         public ICollection<OpeningHours> OpeningHours { get; set; } = new List<OpeningHours>();
         public ICollection<CenterExclusion> CenterExclusions { get; set; } = new List<CenterExclusion>();
+        public ICollection<BloodTypeTargets> BloodTypeTargets { get; set; } = new List<BloodTypeTargets>();
 
         public (TimeSpan Open, TimeSpan Close, int MaxPerSlot)? ResolveOperatingHours(
             DateTime date,

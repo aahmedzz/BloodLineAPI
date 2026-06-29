@@ -34,5 +34,6 @@ public interface IApplicationDbContext
     DbSet<BloodStockThreshold> BloodStockThresholds { get; }
     DbSet<ChatConversation> ChatConversations { get; }
     DbSet<ChatMessage> ChatMessages { get; }
+    DbSet<BloodTypeTargets> BloodTypeTargets { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

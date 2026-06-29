@@ -7,6 +7,8 @@ using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Application.Features.DonationCenters.Dtos;
 using BloodLineAPI.Application.Features.DonationCenters.Queries.GetMainBranchSettings;
 using BloodLineAPI.Application.Features.DonationCenters.Commands.UpdateMainBranchSettings;
+using BloodLineAPI.Application.Features.DonationCenters.Queries.GetWeeklyBloodTypeTargets;
+using BloodLineAPI.Application.Features.DonationCenters.Commands.UpdateWeeklyBloodTypeTargets;
 using BloodLineAPI.Application.Features.DonorEligibility.Dtos;
 using BloodLineAPI.Application.Features.DonorEligibility.Queries.GetCooldownSettings;
 using BloodLineAPI.Application.Features.DonorEligibility.Commands.UpdateCooldownSettings;
@@ -82,6 +84,45 @@ public class DonationCentersController(ISender sender) : ControllerBase
         }
 
         return Ok(ApiResponse<MainBranchSettingsResult>.Ok(result.Data!, "Main branch settings updated successfully."));
+    }
+
+    /// <summary>
+    /// Retrieve weekly blood type targets for the main branch (Admin and Doctor).
+    /// </summary>
+    [HttpGet("main-branch/weekly-targets")]
+    [Authorize(Roles = "Admin,Doctor")]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<WeeklyBloodTypeTargetDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMainBranchWeeklyTargets(CancellationToken cancellationToken)
+    {
+        var mainBranchId = Guid.Parse("b5b4d5b7-eaf8-4a92-8b0a-2fc73f6cc3d1");
+        var result = await sender.Send(new GetWeeklyBloodTypeTargetsQuery(mainBranchId), cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return NotFound(ApiResponse<object>.Fail(result.Error ?? "Main branch weekly targets not found."));
+        }
+        return Ok(ApiResponse<IReadOnlyList<WeeklyBloodTypeTargetDto>>.Ok(result.Data!, "Success"));
+    }
+
+    /// <summary>
+    /// Update weekly blood type targets for the main branch (Admin and Doctor).
+    /// </summary>
+    [HttpPut("main-branch/weekly-targets")]
+    [Authorize(Roles = "Admin,Doctor")]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<WeeklyBloodTypeTargetDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateMainBranchWeeklyTargets(
+        [FromBody] List<UpdateWeeklyBloodTypeTargetDto> targets,
+        CancellationToken cancellationToken)
+    {
+        var mainBranchId = Guid.Parse("b5b4d5b7-eaf8-4a92-8b0a-2fc73f6cc3d1");
+        var command = new UpdateWeeklyBloodTypeTargetsCommand(mainBranchId, targets);
+        var result = await sender.Send(command, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(ApiResponse<object>.Fail(result.Error ?? "Failed to update main branch weekly targets."));
+        }
+        return Ok(ApiResponse<IReadOnlyList<WeeklyBloodTypeTargetDto>>.Ok(result.Data!, "Main branch weekly targets updated successfully."));
     }
 
     #region Campaigns Endpoints (Consolidated)
