@@ -47,15 +47,26 @@ public sealed class GetAllTimeLeaderboardQueryHandler(IApplicationDbContext dbCo
 
         var donors = await query
             .OrderByDescending(d => d.TotalPoints)
-            .ThenBy(d => d.FullName)
+            .ThenBy(d => d.FirstName)
+            .ThenBy(d => d.SecondName)
             .Take(top)
-            .Select(d => new { d.Id, d.FullName, d.District, d.Area, d.TotalPoints })
+            .Select(d => new
+            {
+                d.Id,
+                d.FirstName,
+                d.SecondName,
+                d.ThirdName,
+                d.FourthName,
+                d.District,
+                d.Area,
+                d.TotalPoints
+            })
             .ToListAsync(cancellationToken);
 
         var entries = donors
             .Select((d, index) => new AllTimeLeaderboardEntryDto(
                 d.Id,
-                d.FullName,
+                string.Join(" ", new[] { d.FirstName, d.SecondName, d.ThirdName, d.FourthName }.Where(n => !string.IsNullOrWhiteSpace(n))),
                 d.District,
                 d.Area,
                 d.TotalPoints,

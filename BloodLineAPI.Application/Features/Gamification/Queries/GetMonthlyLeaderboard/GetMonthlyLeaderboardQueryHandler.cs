@@ -47,15 +47,26 @@ public sealed class GetMonthlyLeaderboardQueryHandler(IApplicationDbContext dbCo
 
         var donors = await query
             .OrderByDescending(d => d.MonthlyPoints)
-            .ThenBy(d => d.FullName)
+            .ThenBy(d => d.FirstName)
+            .ThenBy(d => d.SecondName)
             .Take(top)
-            .Select(d => new { d.Id, d.FullName, d.District, d.Area, d.MonthlyPoints })
+            .Select(d => new
+            {
+                d.Id,
+                d.FirstName,
+                d.SecondName,
+                d.ThirdName,
+                d.FourthName,
+                d.District,
+                d.Area,
+                d.MonthlyPoints
+            })
             .ToListAsync(cancellationToken);
 
         var entries = donors
             .Select((d, index) => new MonthlyLeaderboardEntryDto(
                 d.Id,
-                d.FullName,
+                string.Join(" ", new[] { d.FirstName, d.SecondName, d.ThirdName, d.FourthName }.Where(n => !string.IsNullOrWhiteSpace(n))),
                 d.District,
                 d.Area,
                 d.MonthlyPoints,

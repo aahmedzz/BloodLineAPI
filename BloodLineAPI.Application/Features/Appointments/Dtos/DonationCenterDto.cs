@@ -10,4 +10,8 @@ public sealed record DonationCenterDto(
     string CenterType,
     string Status,
     string OperatingHours,
-    IReadOnlyList<string> AvailableDonationTypes);
+    IReadOnlyList<string> AvailableDonationTypes,
+    int AvailableSlotsToday,
+    double? AverageRating,
+    double? DistanceKm,
+    bool IsOpenNow);

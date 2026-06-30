@@ -3,6 +3,7 @@ using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Domain.Entities.Users;
 using BloodLineAPI.Domain.Enums;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,8 @@ public sealed class GetCurrentMobileUserQueryHandler(
     UserManager<User> userManager,
     IApplicationDbContext dbContext,
     IDonorEligibilityService donorEligibilityService,
-    IDateTimeProvider dateTimeProvider)
+    IDateTimeProvider dateTimeProvider,
+    IHttpContextAccessor httpContextAccessor)
     : IRequestHandler<GetCurrentMobileUserQuery, Result<MobileUserProfileResponse>>
 {
     public async Task<Result<MobileUserProfileResponse>> Handle(GetCurrentMobileUserQuery request, CancellationToken cancellationToken)
@@ -59,6 +61,12 @@ public sealed class GetCurrentMobileUserQueryHandler(
             }
         }
 
+        // Build absolute base URL for icon paths
+        var httpReq = httpContextAccessor.HttpContext?.Request;
+        var baseUrl = httpReq is not null
+            ? $"{httpReq.Scheme}://{httpReq.Host}{httpReq.PathBase}/"
+            : string.Empty;
+
         // Retrieve last badge
         var lastDonorBadge = donor.DonorBadges
             .OrderByDescending(db => db.EarnedDate)
@@ -69,7 +77,7 @@ public sealed class GetCurrentMobileUserQueryHandler(
             lastDonorBadge.Badge.BadgeName,
             lastDonorBadge.Badge.BadgeNameAr,
             lastDonorBadge.Badge.BadgeDescription,
-            lastDonorBadge.Badge.IconUrl,
+            baseUrl + lastDonorBadge.Badge.IconUrl,
             lastDonorBadge.Badge.BadgeType.ToString(),
             lastDonorBadge.Badge.BonusPoints,
             lastDonorBadge.EarnedDate.ToString("yyyy-MM-dd")

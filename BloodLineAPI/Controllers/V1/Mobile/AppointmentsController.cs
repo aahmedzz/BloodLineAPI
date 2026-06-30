@@ -10,6 +10,7 @@ using BloodLineAPI.Application.Features.Appointments.Queries.GetAppointmentDetai
 using BloodLineAPI.Application.Features.Appointments.Queries.GetAvailableTimeSlots;
 using BloodLineAPI.Application.Features.Appointments.Queries.GetDonationCenters;
 using BloodLineAPI.Application.Features.Appointments.Queries.GetDonorAppointments;
+using BloodLineAPI.Application.Features.Appointments.Queries.GetCenterBookingDetails;
 using BloodLineAPI.Attributes;
 using BloodLineAPI.Controllers.V1.Mobile.Requests;
 using BloodLineAPI.Domain.Enums;
@@ -31,18 +32,34 @@ public sealed class AppointmentsController(ISender sender) : ControllerBase
 {
     [HttpGet("centers")]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<DonationCenterDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetCenters([FromQuery] string? search, CancellationToken ct)
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetCenters(
+        [FromQuery] string? search, 
+        [FromQuery] double? lat, 
+        [FromQuery] double? lng, 
+        CancellationToken ct)
     {
-        var result = await sender.Send(new GetDonationCentersQuery(search), ct);
+        if (!TryGetDonorId(out var donorId))
+        {
+            return Unauthorized(ApiResponse<object>.Fail("Invalid or missing authentication token."));
+        }
+
+        var result = await sender.Send(new GetDonationCentersQuery(search, donorId, lat, lng), ct);
         return Ok(ApiResponse<IReadOnlyList<DonationCenterDto>>.Ok(result));
     }
 
     [HttpGet("centers/main-branch")]
     [ProducesResponseType(typeof(ApiResponse<DonationCenterDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetMainBranchCenter(CancellationToken ct)
     {
-        var result = await sender.Send(new GetDonationCentersQuery(null), ct);
+        if (!TryGetDonorId(out var donorId))
+        {
+            return Unauthorized(ApiResponse<object>.Fail("Invalid or missing authentication token."));
+        }
+
+        var result = await sender.Send(new GetDonationCentersQuery(null, donorId), ct);
         var mainBranchCenter = result
             .FirstOrDefault(center => string.Equals(center.CenterType, CenterType.MainBranch.ToString(), StringComparison.OrdinalIgnoreCase));
 
@@ -52,6 +69,26 @@ public sealed class AppointmentsController(ISender sender) : ControllerBase
         }
 
         return Ok(ApiResponse<DonationCenterDto>.Ok(mainBranchCenter));
+    }
+
+    [HttpGet("centers/{centerId:guid}/booking-details")]
+    [ProducesResponseType(typeof(ApiResponse<BookingDetailsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetBookingDetails(Guid centerId, CancellationToken ct)
+    {
+        if (!TryGetDonorId(out var donorId))
+        {
+            return Unauthorized(ApiResponse<object>.Fail("Invalid or missing authentication token."));
+        }
+
+        var result = await sender.Send(new GetCenterBookingDetailsQuery(centerId, donorId), ct);
+        if (result is null)
+        {
+            return NotFound(ApiResponse<object>.Fail("Donation center booking details not found."));
+        }
+
+        return Ok(ApiResponse<BookingDetailsDto>.Ok(result));
     }
 
     [HttpGet("time-slots")]
