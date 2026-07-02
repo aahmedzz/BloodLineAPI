@@ -77,6 +77,7 @@ public sealed class GetCurrentMobileUserQueryHandler(
             lastDonorBadge.Badge.BadgeName,
             lastDonorBadge.Badge.BadgeNameAr,
             lastDonorBadge.Badge.BadgeDescription,
+            lastDonorBadge.Badge.BadgeDescriptionAr,
             baseUrl + lastDonorBadge.Badge.IconUrl,
             lastDonorBadge.Badge.BadgeType.ToString(),
             lastDonorBadge.Badge.BonusPoints,

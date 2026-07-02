@@ -19,7 +19,7 @@ namespace BloodLineAPI.Application.Features.Campaigns.Commands.DeleteCampaign;
 public sealed class DeleteCampaignCommandHandler(
     IApplicationDbContext dbContext,
     ICampaignScheduler campaignScheduler,
-    INotificationService notificationService,
+    IBackgroundNotificationService backgroundNotificationService,
     IDateTimeProvider dateTimeProvider,
     ILogger<DeleteCampaignCommandHandler> logger)
     : IRequestHandler<DeleteCampaignCommand, Result<Unit>>
@@ -61,12 +61,13 @@ public sealed class DeleteCampaignCommandHandler(
         var now = dateTimeProvider.LocalNow;
         int cancelledCount = 0;
 
+        var pendingNotifications = new List<(Guid DonorId, string Message, Dictionary<string, string> Payload)>();
+
         foreach (var appt in pendingAppointments)
         {
             appt.Cancel("تم إلغاء الموعد بسبب حذف الحملة", now, gracePeriodMinutes: 0);
             cancelledCount++;
 
-            var title = "إلغاء موعد التبرع";
             var message = $"تم إلغاء موعدك في {campaign.Name} بسبب إلغاء حملة التبرع بالدم.";
             var payload = new Dictionary<string, string>
             {
@@ -74,13 +75,7 @@ public sealed class DeleteCampaignCommandHandler(
                 ["targetId"] = appt.Id.ToString()
             };
 
-            await notificationService.SendNotificationAsync(
-                appt.DonorId,
-                title,
-                message,
-                NotificationType.AppointmentCancelled,
-                payload,
-                cancellationToken);
+            pendingNotifications.Add((appt.DonorId, message, payload));
         }
 
         // 3. Unschedule Hangfire jobs
@@ -95,6 +90,24 @@ public sealed class DeleteCampaignCommandHandler(
 
         // Save changes (cancelling appointments and removing campaign)
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Queue cancellation notifications in the background
+        foreach (var (donorId, message, payload) in pendingNotifications)
+        {
+            try
+            {
+                backgroundNotificationService.EnqueueNotification(
+                    donorId,
+                    "إلغاء موعد التبرع",
+                    message,
+                    NotificationType.AppointmentCancelled,
+                    payload);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to enqueue cancellation notification to donor {DonorId} during campaign deletion.", donorId);
+            }
+        }
 
         logger.LogInformation("Campaign {CampaignId} ({CampaignCode}) deleted. {CancelledCount} pending appointments cancelled.",
             campaign.Id, campaign.CampaignCode, cancelledCount);

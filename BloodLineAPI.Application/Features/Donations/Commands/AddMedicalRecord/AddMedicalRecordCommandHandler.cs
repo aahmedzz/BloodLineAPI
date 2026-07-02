@@ -17,7 +17,8 @@ public sealed class AddMedicalRecordCommandHandler(
     ICurrentUserService currentUserService,
     IApplicationDbContext dbContext,
     IDateTimeProvider dateTimeProvider,
-    IDonorStatusScheduler donorStatusScheduler)
+    IDonorStatusScheduler donorStatusScheduler,
+    IBackgroundNotificationService backgroundNotificationService)
     : IRequestHandler<AddMedicalRecordCommand, Result<string>>
 {
     public async Task<Result<string>> Handle(
@@ -157,6 +158,22 @@ public sealed class AddMedicalRecordCommandHandler(
         if (lockoutUntil.HasValue)
         {
             donorStatusScheduler.ScheduleStatusReset(donor.Id, lockoutUntil.Value);
+
+            if (newDonorStatus == DonorStatus.Deferred)
+            {
+                try
+                {
+                    backgroundNotificationService.EnqueueNotification(
+                        donor.Id,
+                        "🚨 تم تأجيل موعد إمكانية التبرع",
+                        $"عزيزي المتبرع، تم تسجيل تأجيل طبي مؤقت لك حتى {dateTimeProvider.ToLocalTime(lockoutUntil.Value):yyyy-MM-dd}. يمكنك التبرع بالدم بأمان بعد انتهاء هذه الفترة. نسعد بزيارتك مجدداً!",
+                        NotificationType.DonationReminder);
+                }
+                catch
+                {
+                    // Ignore enqueue failures to keep transaction safe
+                }
+            }
         }
 
         return Result<string>.Success(donation.DonationCode);

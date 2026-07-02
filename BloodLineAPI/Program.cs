@@ -38,34 +38,7 @@ var app = builder.Build();
 // Seed default admin account for testing
 await AdminAccountSeeder.SeedAdminAccountAsync(app.Services);
 
-var recurringJobManager = app.Services.GetService<IRecurringJobManager>();
-if (recurringJobManager is not null)
-{
-    recurringJobManager.AddOrUpdate<AppointmentReminderJob>(
-        "appointment-reminders",
-        job => job.ExecuteAsync(CancellationToken.None),
-        "*/15 * * * *");
-
-    recurringJobManager.AddOrUpdate<AppointmentNoShowJob>(
-        "appointment-no-shows",
-        job => job.ExecuteAsync(CancellationToken.None),
-        "0 * * * *");
-
-    recurringJobManager.AddOrUpdate<ChatHistoryCleanupJob>(
-        "chat-history-cleanup",
-        job => job.ExecuteAsync(CancellationToken.None),
-        "0 3 * * *"); // Daily at 3:00 AM UTC
-
-    recurringJobManager.AddOrUpdate<BloodBagExpiryJob>(
-        "blood-bag-expiry",
-        job => job.ExecuteAsync(),
-        "0 0 * * *"); // Daily at midnight UTC
-
-    recurringJobManager.AddOrUpdate<ResetMonthlyPointsJob>(
-        "reset-monthly-points",
-        job => job.ExecuteAsync(CancellationToken.None),
-        "0 0 1 * *"); // Monthly at midnight on the 1st
-}
+app.UseBloodLineRecurringJobs();
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
@@ -79,13 +52,25 @@ app.UseSwaggerUI(options =>
 //}
 
 app.UseHttpsRedirection();
+app.UseDefaultFiles();
 app.UseStaticFiles();
+
+// Serve .well-known folder for Android App Links (assetlinks.json)
+// and iOS Universal Links (apple-app-site-association) deep link verification
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(app.Environment.WebRootPath, ".well-known")),
+    RequestPath = "/.well-known",
+    ServeUnknownFileTypes = true, // needed for apple-app-site-association (no extension)
+    DefaultContentType = "application/json"
+});
 app.UseCors("WebDashboard");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-if (recurringJobManager is not null)
+if (app.Services.GetService<IRecurringJobManager>() is not null)
 {
     app.UseHangfireDashboard("/hangfire", new DashboardOptions
     {

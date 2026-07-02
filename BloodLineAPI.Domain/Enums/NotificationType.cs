@@ -12,5 +12,8 @@ public enum NotificationType
     DonationCompleted,
     UrgentBloodAppeal,
     General,
-    AppointmentRescheduled
+    AppointmentRescheduled,
+    DonationReminder,
+    BloodBagIssued
 }
+

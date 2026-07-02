@@ -13,13 +13,15 @@ namespace BloodLineAPI.Application.Features.Appointments.Commands.SystemCancelAp
 public sealed class SystemCancelAppointmentCommandHandler(
     IApplicationDbContext dbContext,
     IMediator mediator,
-    IDateTimeProvider dateTimeProvider)
+    IDateTimeProvider dateTimeProvider,
+    IBackgroundNotificationService backgroundNotificationService)
     : IRequestHandler<SystemCancelAppointmentCommand, Result<string>>
 {
     public async Task<Result<string>> Handle(SystemCancelAppointmentCommand request, CancellationToken cancellationToken)
     {
         var appointment = await dbContext.DonationAppointments
             .Include(a => a.Donor)
+            .Include(a => a.DonationCenter)
             .FirstOrDefaultAsync(a => a.Id == request.AppointmentId, cancellationToken)
             ?? throw new NotFoundException("DonationAppointment", request.AppointmentId);
 
@@ -39,6 +41,29 @@ public sealed class SystemCancelAppointmentCommandHandler(
             appointment.CancelledAt,
             IsCancelledByDonor: false
         ), cancellationToken);
+
+        // Enqueue background push notification to the donor
+        try
+        {
+            var payload = new Dictionary<string, string>
+            {
+                ["targetEntity"] = "DonationAppointment",
+                ["targetId"] = appointment.Id.ToString()
+            };
+
+            var reasonStr = request.Reason?.Trim() ?? "إلغاء بواسطة المركز";
+
+            backgroundNotificationService.EnqueueNotification(
+                appointment.DonorId,
+                "إلغاء موعد التبرع",
+                $"عزيزي المتبرع، نود إعلامك بأنه قد تم إلغاء موعد تبرعك بالدم في {appointment.DonationCenter.Name} بتاريخ {appointment.ScheduledDate:yyyy-MM-dd} الساعة {appointment.StartTime:hh\\:mm} بسبب: {reasonStr}.",
+                NotificationType.AppointmentCancelled,
+                payload);
+        }
+        catch
+        {
+            // Ignore push notification failures to keep response safe
+        }
 
         return Result<string>.Success("Appointment cancelled successfully.");
     }

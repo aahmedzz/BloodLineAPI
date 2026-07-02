@@ -14,7 +14,9 @@ namespace BloodLineAPI.Application.Features.Donations.Commands.ConfirmDonation;
 public sealed class ConfirmDonationCommandHandler(
     ICurrentUserService currentUserService,
     IApplicationDbContext dbContext,
-    IDateTimeProvider dateTimeProvider)
+    IDateTimeProvider dateTimeProvider,
+    IDynamicSettingsService dynamicSettingsService,
+    IDonorStatusScheduler donorStatusScheduler)
     : IRequestHandler<ConfirmDonationCommand, Result<string>>
 {
     public async Task<Result<string>> Handle(
@@ -96,6 +98,20 @@ public sealed class ConfirmDonationCommandHandler(
 
         // Perform atomic save
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Schedule Cooldown Expiry DonationReminder
+        try
+        {
+            var settings = await dynamicSettingsService.GetSettingsAsync(cancellationToken);
+            var cooldownDays = settings.GetCooldownDays(donation.DonationType, donor.Gender);
+            var cooldownExpiryDate = now.Date.AddDays(cooldownDays);
+
+            donorStatusScheduler.ScheduleCooldownReminder(donor.Id, cooldownExpiryDate);
+        }
+        catch
+        {
+            // Ignore scheduling failures to keep transaction safe
+        }
 
         return Result<string>.Success($"Donation confirmed successfully. Blood bag serial: {bloodBag.SerialNumber}");
     }

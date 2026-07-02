@@ -57,8 +57,12 @@ public static class DependencyInjection
         services.AddScoped<ChatHistoryCleanupJob>();
         services.AddScoped<AppointmentNoShowJob>();
         services.AddScoped<DeferralExpiryJob>();
+        services.AddScoped<InactivityReminderJob>();
+        services.AddScoped<CooldownExpiryJob>();
+        services.AddScoped<SendNotificationBackgroundJob>();
         services.AddScoped<ICampaignScheduler, CampaignScheduler>();
         services.AddScoped<IDonorStatusScheduler, DonorStatusScheduler>();
+        services.AddScoped<IBackgroundNotificationService, BackgroundNotificationService>();
         services.AddScoped<IAppointmentRealignmentScheduler, AppointmentRealignmentScheduler>();
         services.AddScoped<IEmergencyAppealScheduler, EmergencyAppealScheduler>();
         services.AddScoped<ActivateCampaignJob>();

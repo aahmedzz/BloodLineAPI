@@ -13,15 +13,18 @@ public sealed class IssueBloodBagsCommandHandler : IRequestHandler<IssueBloodBag
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IBackgroundNotificationService _notificationService;
 
     public IssueBloodBagsCommandHandler(
         IApplicationDbContext dbContext,
         ICurrentUserService currentUserService,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IBackgroundNotificationService notificationService)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
         _dateTimeProvider = dateTimeProvider;
+        _notificationService = notificationService;
     }
 
     public async Task<IssueBloodBagsResult> Handle(IssueBloodBagsCommand request, CancellationToken cancellationToken)
@@ -45,6 +48,7 @@ public sealed class IssueBloodBagsCommandHandler : IRequestHandler<IssueBloodBag
 
         var results = new List<BagOperationResultItem>();
         var updatedBags = new List<BloodBagDto>();
+        var notifiedDonors = new List<(Guid DonorId, DateTime CollectionDate)>();
         int processed = 0;
         int failed = 0;
 
@@ -105,6 +109,11 @@ public sealed class IssueBloodBagsCommandHandler : IRequestHandler<IssueBloodBag
             results.Add(new BagOperationResultItem(bagId, true));
             processed++;
 
+            if (bag.DonationAppointment != null)
+            {
+                notifiedDonors.Add((bag.DonationAppointment.DonorId, bag.CollectionDate));
+            }
+
             // Build the updated bag DTO
             var bloodType = bag.BloodType != null
                 ? bag.BloodType.BloodGroupName.ToString() +
@@ -141,6 +150,23 @@ public sealed class IssueBloodBagsCommandHandler : IRequestHandler<IssueBloodBag
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Send push notifications after successful DB save
+        foreach (var (donorId, collectionDate) in notifiedDonors)
+        {
+            try
+            {
+                _notificationService.EnqueueNotification(
+                    donorId,
+                    "تبرعك أنقذ حياة! 💖",
+                    $"عزيزي المتبرع، نسعد بتبشيرك بأن تبرعك بالدم بتاريخ {collectionDate:yyyy-MM-dd} قد تم صرفه اليوم لمريض وبحاجة إليه. شكراً لكونك بطلاً ومساهماً في إنقاذ حياة إنسان! 🩸✨",
+                    NotificationType.BloodBagIssued);
+            }
+            catch
+            {
+                // Ignore queue errors to keep command result success
+            }
+        }
 
         return new IssueBloodBagsResult(processed, failed, results, updatedBags);
     }

@@ -50,7 +50,7 @@ public class DeferralExpiryJob(
                 donor.Id,
                 "🚨 انتهاء فترة عدم المؤهلية للتبرع",
                 "لقد انتهت فترة القيد الطبي الخاصة بك. يمكنك الآن التبرع بالدم بأمان ومساعدة الآخرين!",
-                NotificationType.General,
+                NotificationType.DonationReminder,
                 payload: null,
                 ct);
 

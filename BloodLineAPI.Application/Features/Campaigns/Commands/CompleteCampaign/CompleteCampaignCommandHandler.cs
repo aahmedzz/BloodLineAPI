@@ -19,7 +19,7 @@ namespace BloodLineAPI.Application.Features.Campaigns.Commands.CompleteCampaign;
 public sealed class CompleteCampaignCommandHandler(
     IApplicationDbContext dbContext,
     ICampaignScheduler campaignScheduler,
-    INotificationService notificationService,
+    IBackgroundNotificationService backgroundNotificationService,
     IDateTimeProvider dateTimeProvider,
     ILogger<CompleteCampaignCommandHandler> logger)
     : IRequestHandler<CompleteCampaignCommand, Result<CampaignDto>>
@@ -72,26 +72,27 @@ public sealed class CompleteCampaignCommandHandler(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        // 4. Send Push Notifications via NotificationService
+        // 4. Send Push Notifications via BackgroundNotificationService
         foreach (var (donorId, appointmentId) in cancelledDonorIds)
         {
             try
             {
-                await notificationService.SendNotificationAsync(
+                var payload = new Dictionary<string, string>
+                {
+                    ["targetEntity"] = "DonationAppointment",
+                    ["targetId"] = appointmentId.ToString()
+                };
+
+                backgroundNotificationService.EnqueueNotification(
                     donorId,
                     "إلغاء موعد التبرع",
                     $"تم إلغاء موعدك في {campaign.Name} بسبب إنهاء حملة التبرع.",
                     NotificationType.AppointmentCancelled,
-                    new Dictionary<string, string>
-                    {
-                        ["targetEntity"] = "DonationAppointment",
-                        ["targetId"] = appointmentId.ToString()
-                    },
-                    cancellationToken);
+                    payload);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Failed to send cancellation notification to donor {DonorId} during manual early campaign completion.", donorId);
+                logger.LogError(ex, "Failed to enqueue cancellation notification to donor {DonorId} during manual early campaign completion.", donorId);
             }
         }
 

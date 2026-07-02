@@ -36,8 +36,8 @@ public class AppointmentReminderJob(
             {
                 await notificationService.SendNotificationAsync(
                     appt.DonorId,
-                    "Appointment Reminder",
-                    $"Your donation appointment at {appt.DonationCenter.Name} is tomorrow at {appt.StartTime:hh\\:mm}.",
+                    "تذكير بموعد التبرع",
+                    $"تذكير: موعد تبرعك بالدم في {appt.DonationCenter.Name} غداً الساعة {appt.StartTime:hh\\:mm}.",
                     NotificationType.AppointmentReminder,
                     new Dictionary<string, string>
                     {
@@ -51,8 +51,8 @@ public class AppointmentReminderJob(
             {
                 await notificationService.SendNotificationAsync(
                     appt.DonorId,
-                    "Appointment Reminder",
-                    $"Your donation appointment at {appt.DonationCenter.Name} starts at {appt.StartTime:hh\\:mm}.",
+                    "تذكير بموعد التبرع",
+                    $"تذكير: يبدأ موعد تبرعك بالدم في {appt.DonationCenter.Name} خلال ساعة (الساعة {appt.StartTime:hh\\:mm}).",
                     NotificationType.AppointmentReminder,
                     new Dictionary<string, string>
                     {

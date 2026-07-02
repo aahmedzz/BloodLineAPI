@@ -11,6 +11,7 @@ namespace BloodLineAPI.Infrastructure.BackgroundJobs;
 
 public class AppointmentNoShowJob(
     IApplicationDbContext dbContext,
+    INotificationService notificationService,
     ILogger<AppointmentNoShowJob> logger,
     IDateTimeProvider dateTimeProvider)
 {
@@ -44,6 +45,27 @@ public class AppointmentNoShowJob(
                 {
                     app.MarkNoShow(now);
                     noShowCount++;
+
+                    try
+                    {
+                        var payload = new Dictionary<string, string>
+                        {
+                            ["targetEntity"] = "DonationAppointment",
+                            ["targetId"] = app.Id.ToString()
+                        };
+
+                        await notificationService.SendNotificationAsync(
+                            app.DonorId,
+                            "لقد افتقدناك في موعد تبرعك! 🩸",
+                            "لقد افتقدناك في موعد تبرعك اليوم! يمكنك دائماً حجز موعد جديد للمساهمة في إنقاذ حياة.",
+                            NotificationType.AppointmentReminder,
+                            payload,
+                            ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to send no-show notification to donor {DonorId} for appointment {AppointmentId}.", app.DonorId, app.Id);
+                    }
                 }
                 catch (Exception ex)
                 {
