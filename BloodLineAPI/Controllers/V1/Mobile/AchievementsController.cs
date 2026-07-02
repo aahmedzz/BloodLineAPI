@@ -128,7 +128,15 @@ public sealed class AchievementsController(ISender sender) : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
     public async Task<IActionResult> ReferDailyInfo([FromQuery(Name = "ref")] Guid referrerId, CancellationToken cancellationToken)
     {
+        // Credit the referrer (the one who shared) with 50 points
         await sender.Send(new ReferDailyInfoCommand(referrerId), cancellationToken);
+
+        // If the visiting user is authenticated, also credit them with 20 points for reading the tip
+        if (TryGetDonorId(out var visitorId))
+        {
+            await sender.Send(new ReadDailyInfoCommand(visitorId), cancellationToken);
+        }
+
         return Ok(ApiResponse<string>.Ok("Referral registered successfully."));
     }
 

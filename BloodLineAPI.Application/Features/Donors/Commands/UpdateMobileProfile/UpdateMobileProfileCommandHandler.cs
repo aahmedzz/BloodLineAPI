@@ -159,6 +159,7 @@ public sealed class UpdateMobileProfileCommandHandler(
             lastDonorBadge.Badge.BadgeName,
             lastDonorBadge.Badge.BadgeNameAr,
             lastDonorBadge.Badge.BadgeDescription,
+            lastDonorBadge.Badge.BadgeDescriptionAr,
             lastDonorBadge.Badge.IconUrl,
             lastDonorBadge.Badge.BadgeType.ToString(),
             lastDonorBadge.Badge.BonusPoints,

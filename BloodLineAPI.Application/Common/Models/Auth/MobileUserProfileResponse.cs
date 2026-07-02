@@ -43,6 +43,7 @@ public record DonorBadgeDto(
     string BadgeName,
     string BadgeNameAr,
     string BadgeDescription,
+    string BadgeDescriptionAr,
     string IconUrl,
     string BadgeType,
     int    BonusPoints,

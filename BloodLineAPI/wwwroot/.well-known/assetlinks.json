@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.monqez",
+      "sha256_cert_fingerprints": [
+        "07:71:A6:83:C6:54:98:BC:C0:F6:30:43:D7:6C:57:B9:16:5C:8C:5C:E9:FB:15:58:2C:6F:BE:26:35:72:52:79"
+      ]
+    }
+  }
+]
