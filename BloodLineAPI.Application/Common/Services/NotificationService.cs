@@ -17,7 +17,7 @@ public class NotificationService(
     IDateTimeProvider dateTimeProvider)
     : INotificationService
 {
-    public async Task SendNotificationAsync(
+    public async Task<bool> SendNotificationAsync(
         Guid donorId,
         string title,
         string message,
@@ -32,7 +32,7 @@ public class NotificationService(
 
         if (userId == Guid.Empty)
         {
-            return;
+            return false;
         }
 
         var notification = new Notification
@@ -56,6 +56,8 @@ public class NotificationService(
             notification.SentVia = "fcm";
             await dbContext.SaveChangesAsync(cancellationToken);
         }
+
+        return sent;
     }
 
     public async Task SendBatchNotificationAsync(

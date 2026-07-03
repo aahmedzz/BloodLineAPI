@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using BloodLineAPI.Application.Common.Interfaces;
+using BloodLineAPI.Application.Features.DonorEligibility.Dtos;
 using BloodLineAPI.Application.Features.Inventory.Queries.GetOutflowHistory;
 using PdfSharpCore.Drawing;
 using PdfSharpCore.Pdf;
@@ -194,6 +195,175 @@ public sealed class PdfGenerator : IPdfGenerator
         }
 
         // Draw footer on final page
+        DrawFooter();
+
+        // Save PDF to memory stream
+        using var stream = new MemoryStream();
+        document.Save(stream);
+        return stream.ToArray();
+    }
+
+    public byte[] GenerateFailedDonorsReport(List<FailedDonorDto> failedDonors, string performedByName, DateTime generatedAt)
+    {
+        // Create new PDF document
+        using var document = new PdfDocument();
+        document.Info.Title = "BloodLine Failed Emergency Notification Outreach Report";
+        document.Info.Author = performedByName;
+        document.Info.Subject = "Failed Emergency Notifications";
+
+        // Margins and Layout
+        const double marginLeft = 40;
+        const double marginRight = 40;
+        const double marginTop = 40;
+        const double maxPageHeight = 780; // height of A4 is 842, stop before bottom margin
+        const double rowHeight = 22;
+
+        int pageIndex = 1;
+        PdfPage page = document.AddPage();
+        page.Size = PageSize.A4;
+        XGraphics gfx = XGraphics.FromPdfPage(page);
+
+        // Fonts
+        var unicodeOptions = new XPdfFontOptions(PdfFontEncoding.Unicode);
+        XFont fontTitle = new XFont("Arial", 16, XFontStyle.Bold, unicodeOptions);
+        XFont fontSubtitle = new XFont("Arial", 11, XFontStyle.Regular, unicodeOptions);
+        XFont fontMeta = new XFont("Arial", 9, XFontStyle.Regular, unicodeOptions);
+        XFont fontHeader = new XFont("Arial", 9.5, XFontStyle.Bold, unicodeOptions);
+        XFont fontData = new XFont("Arial", 9, XFontStyle.Regular, unicodeOptions);
+        XFont fontFooter = new XFont("Arial", 8, XFontStyle.Regular, unicodeOptions);
+
+        // Emergency Colors (Dark Red/Crimson branding)
+        XSolidBrush headerBrush = new XSolidBrush(XColor.FromArgb(153, 27, 27)); // Dark Red #991B1B
+        XSolidBrush textWhite = new XSolidBrush(XColors.White);
+        XSolidBrush textDark = new XSolidBrush(XColor.FromArgb(31, 41, 55)); // Charcoal #1F2937
+        XSolidBrush textGray = new XSolidBrush(XColors.Gray);
+        XSolidBrush rowLightGray = new XSolidBrush(XColor.FromArgb(254, 242, 242)); // Very soft red tint #FEF2F2
+        XSolidBrush rowWhite = new XSolidBrush(XColors.White);
+
+        XPen borderPen = new XPen(XColor.FromArgb(243, 203, 203), 0.75); // Soft red border
+        XPen dividerPen = new XPen(XColor.FromArgb(153, 27, 27), 1.5);
+
+        // Column width mapping (total width: 515pt)
+        double[] colWidths = { 140, 60, 90, 225 };
+        double[] colX = new double[4];
+        colX[0] = marginLeft;
+        for (int i = 1; i < colX.Length; i++)
+        {
+            colX[i] = colX[i - 1] + colWidths[i - 1];
+        }
+
+        // Draw page header template
+        void DrawHeader(double yStart)
+        {
+            // Title
+            gfx.DrawString("BloodLine - Emergency Notification Outbox Report", fontTitle, headerBrush, marginLeft, yStart);
+            gfx.DrawString(ArabicSupport.ArabicFixer.Fix("تقرير تعذر إرسال الإشعارات الطارئة للمتصلين"), fontSubtitle, textGray, marginLeft, yStart + 18);
+
+            // Divider
+            gfx.DrawLine(dividerPen, marginLeft, yStart + 26, page.Width - marginRight, yStart + 26);
+
+            // Metadata
+            double metaY = yStart + 42;
+            gfx.DrawString($"Report Date: {generatedAt:yyyy-MM-dd HH:mm}", fontMeta, textDark, marginLeft, metaY);
+            gfx.DrawString(ArabicSupport.ArabicFixer.Fix($"Exported By: {performedByName}", false), fontMeta, textDark, marginLeft, metaY + 14);
+            gfx.DrawString($"Failed Recipients: {failedDonors.Count}", fontMeta, textDark, page.Width - marginRight - 120, metaY);
+        }
+
+        void DrawTableHeaders(double y)
+        {
+            gfx.DrawRectangle(headerBrush, marginLeft, y, page.Width - marginLeft - marginRight, 22);
+
+            string[] headers = { "Donor Name", "Blood Type", "Phone Number", "Failure Reason" };
+            XStringFormat format = new XStringFormat
+            {
+                Alignment = XStringAlignment.Center,
+                LineAlignment = XLineAlignment.Center
+            };
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                gfx.DrawString(headers[i], fontHeader, textWhite, new XRect(colX[i], y, colWidths[i], 22), format);
+            }
+
+            XPen headerBorderPen = new XPen(XColor.FromArgb(255, 255, 255, 50), 0.75);
+            for (int i = 1; i < colX.Length; i++)
+            {
+                gfx.DrawLine(headerBorderPen, colX[i], y, colX[i], y + 22);
+            }
+        }
+
+        void DrawFooter()
+        {
+            string footerText = $"Page {pageIndex}";
+            gfx.DrawString(footerText, fontFooter, textGray, new XRect(marginLeft, page.Height - 30, page.Width - marginLeft - marginRight, 15), XStringFormats.Center);
+        }
+
+        // Draw First Page
+        DrawHeader(marginTop);
+        double currentY = 125;
+        DrawTableHeaders(currentY);
+        currentY += 22;
+
+        XStringFormat cellFormat = new XStringFormat
+        {
+            Alignment = XStringAlignment.Center,
+            LineAlignment = XLineAlignment.Center
+        };
+
+        int itemIndex = 0;
+        foreach (var donor in failedDonors)
+        {
+            // Page break check
+            if (currentY + rowHeight > maxPageHeight)
+            {
+                DrawFooter();
+
+                // Add new page
+                page = document.AddPage();
+                page.Size = PageSize.A4;
+                gfx = XGraphics.FromPdfPage(page);
+                pageIndex++;
+
+                // Lighter continuing header
+                gfx.DrawString("BloodLine - Emergency Notification Outbox Report (Continued)", fontSubtitle, headerBrush, marginLeft, 30);
+                gfx.DrawLine(borderPen, marginLeft, 44, page.Width - marginRight, 44);
+
+                currentY = 55;
+                DrawTableHeaders(currentY);
+                currentY += 22;
+            }
+
+            // Draw row background
+            XSolidBrush rowBg = (itemIndex % 2 == 0) ? rowWhite : rowLightGray;
+            gfx.DrawRectangle(rowBg, marginLeft, currentY, page.Width - marginLeft - marginRight, rowHeight);
+            gfx.DrawRectangle(borderPen, marginLeft, currentY, page.Width - marginLeft - marginRight, rowHeight);
+
+            // Columns vertical separator
+            for (int i = 1; i < colX.Length; i++)
+            {
+                gfx.DrawLine(borderPen, colX[i], currentY, colX[i], currentY + rowHeight);
+            }
+
+            // Fix Arabic Strings
+            string donorNameFixed = ArabicSupport.ArabicFixer.Fix(donor.FullName, false);
+            string failureReasonFixed = ArabicSupport.ArabicFixer.Fix(donor.FailureReason, false);
+
+            string[] values = {
+                donorNameFixed,
+                donor.BloodType,
+                donor.PhoneNumber,
+                failureReasonFixed
+            };
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                gfx.DrawString(values[i] ?? "-", fontData, textDark, new XRect(colX[i], currentY, colWidths[i], rowHeight), cellFormat);
+            }
+
+            currentY += rowHeight;
+            itemIndex++;
+        }
+
         DrawFooter();
 
         // Save PDF to memory stream

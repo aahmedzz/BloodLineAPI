@@ -5,6 +5,7 @@ using BloodLineAPI.Application.Features.DonorEligibility.Queries.GetEligibleDono
 using BloodLineAPI.Application.Features.DonorEligibility.Queries.GetEligibilityStats;
 using BloodLineAPI.Application.Features.DonorEligibility.Commands.SendEmergencyNotifications;
 using BloodLineAPI.Application.Features.DonorEligibility.Queries.GetEmergencyNotificationPreview;
+using BloodLineAPI.Application.Features.DonorEligibility.Queries.ExportFailedDonorsPdf;
 using BloodLineAPI.Attributes;
 using BloodLineAPI.Domain.Enums;
 using MediatR;
@@ -100,6 +101,25 @@ public class DonorEligibilityController(ISender sender) : ControllerBase
 
         // Return 202 Accepted per requirements
         return Accepted(ApiResponse<SendBulkNotificationResultDto>.Ok(result.Data!, "Notifications processed successfully."));
+    }
+
+    /// <summary>
+    /// Export the list of failed emergency notification recipients to a formatted PDF report (Doctor role).
+    /// </summary>
+    [HttpGet("notifications/export-failed-pdf/{appealId}")]
+    [Authorize(Roles = "Doctor")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ExportFailedDonorsPdf(
+        [FromRoute] Guid appealId,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new ExportFailedDonorsPdfQuery(appealId);
+        var pdfBytes = await sender.Send(query, cancellationToken);
+        var filename = $"failed_donors_report_{DateTime.UtcNow:yyyy-MM-dd}.pdf";
+        return File(pdfBytes, "application/pdf", filename);
     }
 
     /// <summary>

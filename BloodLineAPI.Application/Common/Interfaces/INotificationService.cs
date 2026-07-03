@@ -8,7 +8,7 @@ namespace BloodLineAPI.Application.Common.Interfaces;
 
 public interface INotificationService
 {
-    Task SendNotificationAsync(
+    Task<bool> SendNotificationAsync(
         Guid donorId,
         string title,
         string message,

@@ -30,7 +30,7 @@ public class EmergencyNotificationService(
         string Title, 
         string Message, 
         int RequestedCount, 
-        List<Guid> FailedDonorIds)> ResolveNotificationDetailsAsync(
+        List<FailedDonorDto> FailedDonors)> ResolveNotificationDetailsAsync(
             string? selectionMode,
             List<Guid>? donorIds,
             DonorEligibilityFiltersDto? filters,
@@ -72,12 +72,12 @@ public class EmergencyNotificationService(
         }
 
         var requestedCount = targetDonorIds.Count;
-        var failedDonorIds = new List<Guid>();
+        var failedDonors = new List<FailedDonorDto>();
         var eligibleDonorsToSend = new List<Donor>();
 
         if (requestedCount == 0)
         {
-            return (eligibleDonorsToSend, new List<BloodType>(), "🚨 فرصة للمساعدة في إنقاذ حياة", "🚨 فرصة لإنقاذ حياة: هناك حاجة لمتبرعين بالدم حالياً لدعم المرضى المحتاجين.", 0, failedDonorIds);
+            return (eligibleDonorsToSend, new List<BloodType>(), "🚨 فرصة للمساعدة في إنقاذ حياة", "🚨 فرصة لإنقاذ حياة: هناك حاجة لمتبرعين بالدم حالياً لدعم المرضى المحتاجين.", 0, failedDonors);
         }
 
         // 1. Fetch requested donors
@@ -87,18 +87,7 @@ public class EmergencyNotificationService(
             .Where(d => targetDonorIds.Contains(d.Id))
             .ToListAsync(cancellationToken);
 
-        // Find missing donor IDs
-        if (!isFilteredMode)
-        {
-            var foundDonorIds = donors.Select(d => d.Id).ToHashSet();
-            foreach (var requestedId in targetDonorIds)
-            {
-                if (!foundDonorIds.Contains(requestedId))
-                {
-                    failedDonorIds.Add(requestedId);
-                }
-            }
-        }
+        // Note: Missing donor IDs (not found in database) are silently skipped as they cannot be contacted anyway.
 
         // 2. Batch query rate limits (max 1 notification per donor per 24 hours)
         var twentyFourHoursAgo = dateTimeProvider.UtcNow.AddDays(-1);
@@ -114,7 +103,7 @@ public class EmergencyNotificationService(
             var checkResult = await eligibilityService.CheckEligibilityAsync(donor.Id, DonationType.WholeBlood, cancellationToken);
             if (!checkResult.IsSuccess || checkResult.Data == null)
             {
-                failedDonorIds.Add(donor.Id);
+                // Ineligible -> skip manual call outreach list
                 continue;
             }
 
@@ -124,7 +113,7 @@ public class EmergencyNotificationService(
             // Server-side enforcement: Only allow sending to "eligible" or "soon"
             if (status != "eligible" && status != "soon")
             {
-                failedDonorIds.Add(donor.Id);
+                // Deferred/Ineligible -> skip manual call outreach list
                 continue;
             }
 
@@ -132,14 +121,20 @@ public class EmergencyNotificationService(
             var recentCount = recentNotificationsMap.GetValueOrDefault(donor.Id, 0);
             if (recentCount >= 1)
             {
-                failedDonorIds.Add(donor.Id);
+                // Already notified -> skip
                 continue;
             }
 
             // Remove Donors without App Accounts
             if (donor.User == null || donor.User.PasswordHash == null)
             {
-                failedDonorIds.Add(donor.Id);
+                // Eligible but has no mobile app account. Add to failed list for manual call.
+                failedDonors.Add(new FailedDonorDto(
+                    donor.Id,
+                    donor.FullName,
+                    donor.PhoneNumber,
+                    donor.BloodType?.FullDisplayname ?? "Unknown",
+                    "لا يوجد حساب نشط على تطبيق الهاتف"));
                 continue;
             }
 
@@ -148,7 +143,7 @@ public class EmergencyNotificationService(
 
         if (eligibleDonorsToSend.Count == 0)
         {
-            return (eligibleDonorsToSend, new List<BloodType>(), "🚨 فرصة للمساعدة في إنقاذ حياة", "🚨 فرصة لإنقاذ حياة: هناك حاجة لمتبرعين بالدم حالياً لدعم المرضى المحتاجين.", requestedCount, failedDonorIds);
+            return (eligibleDonorsToSend, new List<BloodType>(), "🚨 فرصة للمساعدة في إنقاذ حياة", "🚨 فرصة لإنقاذ حياة: هناك حاجة لمتبرعين بالدم حالياً لدعم المرضى المحتاجين.", requestedCount, failedDonors);
         }
 
         var targetedBloodTypeIds = eligibleDonorsToSend
@@ -171,7 +166,7 @@ public class EmergencyNotificationService(
             ? $"🚨 فرصة لإنقاذ حياة: فصيلتك الدموية ({targetedBloodTypesStr}) مطلوبة حالياً لدعم حالات بحاجة للتبرع بالدم. تبرعك قد يكون سبباً في إدخال الفرحة والشفاء على قلب مريض وعائلته. نسعد بزيارتك لأقرب مركز تبرع."
             : "🚨 فرصة لإنقاذ حياة: هناك حاجة لمتبرعين بالدم حالياً لدعم المرضى المحتاجين. تبرعك قد يكون سبباً في إدخال الفرحة والشفاء على قلب مريض وعائلته. نسعد بزيارتك لأقرب مركز تبرع.";
 
-        return (eligibleDonorsToSend, targetedBloodTypes, title, message, requestedCount, failedDonorIds);
+        return (eligibleDonorsToSend, targetedBloodTypes, title, message, requestedCount, failedDonors);
     }
 
     public async Task<Result<SendBulkNotificationResultDto>> SendBulkEmergencyNotificationAsync(
@@ -188,10 +183,11 @@ public class EmergencyNotificationService(
         if (resolved.EligibleDonors.Count == 0)
         {
             return Result<SendBulkNotificationResultDto>.Success(new SendBulkNotificationResultDto(
+                AppealId: null,
                 Requested: resolved.RequestedCount,
                 Sent: 0,
-                Failed: resolved.FailedDonorIds.Count,
-                FailedDonorIds: resolved.FailedDonorIds
+                Failed: resolved.FailedDonors.Count,
+                FailedDonors: resolved.FailedDonors
             ));
         }
 
@@ -236,7 +232,7 @@ public class EmergencyNotificationService(
 
         // 4. Send notifications via NotificationService (handles DB audit + FCM dispatch)
         var sentCount = 0;
-        var failedDonorIds = new List<Guid>(resolved.FailedDonorIds);
+        var failedDonors = new List<FailedDonorDto>(resolved.FailedDonors);
         var payload = new Dictionary<string, string>
         {
             { "targetEntity", "UrgentBloodAppeal" },
@@ -247,26 +243,45 @@ public class EmergencyNotificationService(
         {
             try
             {
-                await notificationService.SendNotificationAsync(
+                var success = await notificationService.SendNotificationAsync(
                     donor.Id,
                     resolved.Title,
                     resolved.Message,
                     NotificationType.UrgentBloodAppeal,
                     payload,
                     cancellationToken: cancellationToken);
-                sentCount++;
+                
+                if (success)
+                {
+                    sentCount++;
+                }
+                else
+                {
+                    failedDonors.Add(new FailedDonorDto(
+                        donor.Id,
+                        donor.FullName,
+                        donor.PhoneNumber,
+                        donor.BloodType?.FullDisplayname ?? "Unknown",
+                        "فشل نظام الإشعارات في إرسال إشعار الهاتف"));
+                }
             }
-            catch
+            catch (Exception)
             {
-                failedDonorIds.Add(donor.Id);
+                failedDonors.Add(new FailedDonorDto(
+                    donor.Id,
+                    donor.FullName,
+                    donor.PhoneNumber,
+                    donor.BloodType?.FullDisplayname ?? "Unknown",
+                    "خطأ غير متوقع أثناء إرسال الإشعار"));
             }
         }
 
         var resultDto = new SendBulkNotificationResultDto(
+            AppealId: appeal.Id,
             Requested: resolved.RequestedCount,
             Sent: sentCount,
-            Failed: failedDonorIds.Count,
-            FailedDonorIds: failedDonorIds
+            Failed: failedDonors.Count,
+            FailedDonors: failedDonors
         );
 
         return Result<SendBulkNotificationResultDto>.Success(resultDto);
