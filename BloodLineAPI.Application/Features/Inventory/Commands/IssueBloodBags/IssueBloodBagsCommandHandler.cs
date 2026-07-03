@@ -1,5 +1,7 @@
+using BloodLineAPI.Application.Common.Exceptions;
 using BloodLineAPI.Application.Common.Interfaces;
 using BloodLineAPI.Application.Features.Inventory.Queries.GetBloodBags;
+using BloodLineAPI.Domain.Common;
 using BloodLineAPI.Domain.Entities;
 using BloodLineAPI.Domain.Entities.BloodEntities;
 using BloodLineAPI.Domain.Enums;
@@ -43,12 +45,12 @@ public sealed class IssueBloodBagsCommandHandler : IRequestHandler<IssueBloodBag
 
             if (demand == null)
             {
-                throw new ArgumentException("طلب الدم المحدد غير موجود.");
+                throw new NotFoundException("BloodDemand", request.BloodDemandId.Value);
             }
 
             if (demand.Status == BloodDemandStatus.Fulfilled || demand.Status == BloodDemandStatus.Cancelled)
             {
-                throw new InvalidOperationException("طلب الدم المحدد مكتمل أو ملغي بالفعل.");
+                throw new DomainException("طلب الدم المحدد مكتمل أو ملغي بالفعل.");
             }
         }
 
@@ -62,6 +64,22 @@ public sealed class IssueBloodBagsCommandHandler : IRequestHandler<IssueBloodBag
                 .ThenInclude(dr => dr!.AuthorizedByStaff)
             .Where(bb => request.BagIds.Contains(bb.Id))
             .ToListAsync(cancellationToken);
+
+        if (demand != null)
+        {
+            // 1. Capacity Validation: selected bags count must not exceed remainingUnits
+            if (request.BagIds.Count > demand.RemainingUnits)
+            {
+                throw new DomainException("OVER_FULFILLMENT_NOT_ALLOWED");
+            }
+
+            // 2. Blood Type Validation: check if there's any mismatch
+            var isAnyMismatch = bags.Any(b => b.BloodTypeId != demand.BloodTypeId);
+            if (isAnyMismatch)
+            {
+                throw new DomainException("BLOOD_TYPE_MISMATCH");
+            }
+        }
 
         var results = new List<BagOperationResultItem>();
         var updatedBags = new List<BloodBagDto>();
