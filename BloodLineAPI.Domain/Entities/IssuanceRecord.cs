@@ -1,3 +1,5 @@
+using BloodLineAPI.Domain.Entities.BloodEntities;
+
 namespace BloodLineAPI.Domain.Entities
 {
     public class IssuanceRecord : AuditableEntity
@@ -9,8 +11,10 @@ namespace BloodLineAPI.Domain.Entities
         public string NationalId { get; set; } = string.Empty;
         public string? Phone { get; set; }
         public string Reason { get; set; } = string.Empty;
+        public Guid? BloodDemandId { get; set; }
 
         public BloodBag BloodBag { get; set; } = null!;
         public Staff IssuedByStaff { get; set; } = null!;
+        public BloodDemand? BloodDemand { get; set; }
     }
 }

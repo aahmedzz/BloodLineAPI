@@ -46,6 +46,7 @@ public class ApplicationDbContext(
     public DbSet<ChatConversation> ChatConversations { get; set; } = null!;
     public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
     public DbSet<BloodTypeTargets> BloodTypeTargets { get; set; } = null!;
+    public DbSet<BloodDemand> BloodDemands { get; set; } = null!;
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

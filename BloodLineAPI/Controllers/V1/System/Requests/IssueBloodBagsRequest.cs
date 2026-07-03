@@ -5,5 +5,6 @@ public record IssueBloodBagsRequest(
     string RecipientName,
     string NationalId,
     string? Phone,
-    string Reason
+    string Reason,
+    Guid? BloodDemandId = null
 );

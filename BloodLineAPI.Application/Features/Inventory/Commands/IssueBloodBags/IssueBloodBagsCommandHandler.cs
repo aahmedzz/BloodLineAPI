@@ -35,6 +35,23 @@ public sealed class IssueBloodBagsCommandHandler : IRequestHandler<IssueBloodBag
         var staffId = Guid.Parse(_currentUserService.UserId);
         var now = _dateTimeProvider.UtcNow;
 
+        BloodDemand? demand = null;
+        if (request.BloodDemandId.HasValue)
+        {
+            demand = await _dbContext.BloodDemands
+                .FirstOrDefaultAsync(bd => bd.Id == request.BloodDemandId.Value, cancellationToken);
+
+            if (demand == null)
+            {
+                throw new ArgumentException("طلب الدم المحدد غير موجود.");
+            }
+
+            if (demand.Status == BloodDemandStatus.Fulfilled || demand.Status == BloodDemandStatus.Cancelled)
+            {
+                throw new InvalidOperationException("طلب الدم المحدد مكتمل أو ملغي بالفعل.");
+            }
+        }
+
         var bags = await _dbContext.BloodBags
             .Include(bb => bb.BloodType)
             .Include(bb => bb.DonationAppointment)
@@ -51,6 +68,7 @@ public sealed class IssueBloodBagsCommandHandler : IRequestHandler<IssueBloodBag
         var notifiedDonors = new List<(Guid DonorId, DateTime CollectionDate)>();
         int processed = 0;
         int failed = 0;
+        int processedForDemand = 0;
 
         // Get staff info for the response
         var staff = await _dbContext.Staff.FindAsync(new object[] { staffId }, cancellationToken);
@@ -76,6 +94,14 @@ public sealed class IssueBloodBagsCommandHandler : IRequestHandler<IssueBloodBag
                 continue;
             }
 
+            // Validate blood type match for demand if applicable
+            if (demand != null && bag.BloodTypeId != demand.BloodTypeId)
+            {
+                results.Add(new BagOperationResultItem(bagId, false, "INVALID_BLOOD_TYPE", "فصيلة دم الحقيبة لا تطابق الفصيلة المطلوبة في الطلب"));
+                failed++;
+                continue;
+            }
+
             // Perform the transition
             var previousStatus = bag.Status;
             bag.Status = BloodBagStatus.Issued;
@@ -90,7 +116,8 @@ public sealed class IssueBloodBagsCommandHandler : IRequestHandler<IssueBloodBag
                 RecipientName = request.RecipientName,
                 NationalId = request.NationalId,
                 Phone = request.Phone,
-                Reason = request.Reason
+                Reason = request.Reason,
+                BloodDemandId = request.BloodDemandId
             };
             await _dbContext.IssuanceRecords.AddAsync(issuanceRecord, cancellationToken);
 
@@ -108,6 +135,10 @@ public sealed class IssueBloodBagsCommandHandler : IRequestHandler<IssueBloodBag
 
             results.Add(new BagOperationResultItem(bagId, true));
             processed++;
+            if (demand != null)
+            {
+                processedForDemand++;
+            }
 
             if (bag.DonationAppointment != null)
             {
@@ -147,6 +178,19 @@ public sealed class IssueBloodBagsCommandHandler : IRequestHandler<IssueBloodBag
                 DisposeReason: null,
                 DisposeNotes: null
             ));
+        }
+
+        if (demand != null && processedForDemand > 0)
+        {
+            demand.IssuedUnits += processedForDemand;
+            if (demand.IssuedUnits >= demand.RequestedUnits)
+            {
+                demand.Status = BloodDemandStatus.Fulfilled;
+            }
+            else
+            {
+                demand.Status = BloodDemandStatus.PartiallyFulfilled;
+            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

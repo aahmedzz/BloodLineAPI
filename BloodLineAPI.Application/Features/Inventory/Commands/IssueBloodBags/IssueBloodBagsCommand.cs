@@ -7,4 +7,5 @@ public sealed record IssueBloodBagsCommand(
     string RecipientName,
     string NationalId,
     string? Phone,
-    string Reason) : IRequest<IssueBloodBagsResult>;
+    string Reason,
+    Guid? BloodDemandId = null) : IRequest<IssueBloodBagsResult>;

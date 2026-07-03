@@ -35,5 +35,6 @@ public interface IApplicationDbContext
     DbSet<ChatConversation> ChatConversations { get; }
     DbSet<ChatMessage> ChatMessages { get; }
     DbSet<BloodTypeTargets> BloodTypeTargets { get; }
+    DbSet<BloodDemand> BloodDemands { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

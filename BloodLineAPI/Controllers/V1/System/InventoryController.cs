@@ -142,7 +142,8 @@ public class InventoryController(ISender sender) : ControllerBase
                 request.RecipientName,
                 request.NationalId,
                 request.Phone,
-                request.Reason);
+                request.Reason,
+                request.BloodDemandId);
 
             var result = await sender.Send(cmd, cancellationToken);
             return Ok(ApiResponse<IssueBloodBagsResult>.Ok(result, "تمت معالجة طلب صرف الحقائب"));

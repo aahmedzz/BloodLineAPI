@@ -21,6 +21,11 @@ namespace BloodLineAPI.Infrastructure.Persistence.Configurations
                 .WithMany(s => s.IssuedBloodBags)
                 .HasForeignKey(ir => ir.IssuedByStaffId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(ir => ir.BloodDemand)
+                .WithMany(bd => bd.IssuanceRecords)
+                .HasForeignKey(ir => ir.BloodDemandId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

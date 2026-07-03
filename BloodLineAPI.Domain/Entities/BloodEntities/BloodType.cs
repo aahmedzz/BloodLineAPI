@@ -14,5 +14,6 @@ namespace BloodLineAPI.Domain.Entities.BloodEntities
         public ICollection<Donor> Donors { get; set; } = new List<Donor>();
         public ICollection<BloodBag> BloodBags { get; set; } = new List<BloodBag>();
         public ICollection<UrgentBloodAppeal> UrgentBloodAppeals { get; set; } = new List<UrgentBloodAppeal>();
+        public ICollection<BloodDemand> BloodDemands { get; set; } = new List<BloodDemand>();
     }
 }
