@@ -16,7 +16,8 @@ public sealed class ConfirmDonationCommandHandler(
     IApplicationDbContext dbContext,
     IDateTimeProvider dateTimeProvider,
     IDynamicSettingsService dynamicSettingsService,
-    IDonorStatusScheduler donorStatusScheduler)
+    IDonorStatusScheduler donorStatusScheduler,
+    IBackgroundNotificationService backgroundNotificationService)
     : IRequestHandler<ConfirmDonationCommand, Result<string>>
 {
     public async Task<Result<string>> Handle(
@@ -111,6 +112,28 @@ public sealed class ConfirmDonationCommandHandler(
         catch
         {
             // Ignore scheduling failures to keep transaction safe
+        }
+
+        // Enqueue rating push notification
+        try
+        {
+            var payload = new Dictionary<string, string>
+            {
+                ["targetEntity"] = "DonationAppointment",
+                ["targetId"] = donation.Id.ToString(),
+                ["action"] = "rate"
+            };
+
+            backgroundNotificationService.EnqueueNotification(
+                donor.Id,
+                "⭐ كيف كانت تجربتك في التبرع؟",
+                "عزيزي المتبرع، نشكرك على تبرعك بالدم اليوم! يرجى أخذ لحظة لتقييم تجربتك في مركز التبرع لمساعدتنا في تحسين خدماتنا.",
+                NotificationType.RateDonationCenter,
+                payload);
+        }
+        catch
+        {
+            // Ignore push notification failures to keep transaction safe
         }
 
         return Result<string>.Success($"Donation confirmed successfully. Blood bag serial: {bloodBag.SerialNumber}");

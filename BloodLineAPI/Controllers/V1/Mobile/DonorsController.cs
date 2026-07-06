@@ -2,6 +2,7 @@ using Asp.Versioning;
 using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Application.Features.Donors.Commands.UpdateMobileProfile;
 using BloodLineAPI.Application.Features.Donors.Commands.UpdateDonorLocation;
+using BloodLineAPI.Application.Features.Donors.Commands.UpdateDonorSettings;
 using BloodLineAPI.Application.Features.Donors.Queries.GetMyEligibility;
 using BloodLineAPI.Attributes;
 using MediatR;
@@ -90,6 +91,32 @@ public class DonorsController(ISender sender) : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateLocation([FromBody] UpdateDonorLocationCommand command, CancellationToken cancellationToken)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(ApiResponse<object>.Fail("Invalid or missing authentication token."));
+        }
+
+        var result = await _sender.Send(command with { UserId = userId }, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
+        }
+
+        return Ok(ApiResponse<string>.Ok(result.Data!));
+    }
+    /// <summary>
+    /// Update the authenticated donor's app settings.
+    /// </summary>
+    /// <remarks>
+    /// Currently supports toggling leaderboard visibility. More settings may be added in the future.
+    /// </remarks>
+    [HttpPatch("me/settings")]
+    [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> UpdateSettings([FromBody] UpdateDonorSettingsCommand command, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdClaim, out var userId))

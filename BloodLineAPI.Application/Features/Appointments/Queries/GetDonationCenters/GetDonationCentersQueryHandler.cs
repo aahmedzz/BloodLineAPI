@@ -103,10 +103,12 @@ public sealed class GetDonationCentersQueryHandler(
                 center.OpeningHours.ToList());
 
             bool isOpenNow = false;
+            string operatingHoursText = "Closed";
             if (operatingHours.HasValue)
             {
                 var (open, close, _) = operatingHours.Value;
                 isOpenNow = nowTime >= open && nowTime <= close;
+                operatingHoursText = $"{open:hh\\:mm} - {close:hh\\:mm}";
             }
 
             // Distance calculation
@@ -139,7 +141,7 @@ public sealed class GetDonationCentersQueryHandler(
                 center.Longitude,
                 center.CenterType.ToString(),
                 center.Status.ToString(),
-                $"{center.StartTime:hh\\:mm} - {center.EndTime:hh\\:mm}",
+                operatingHoursText,
                 availableDonationTypes,
                 availableSlotsToday,
                 averageRating,

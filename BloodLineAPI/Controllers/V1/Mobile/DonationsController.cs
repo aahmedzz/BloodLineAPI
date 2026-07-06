@@ -2,6 +2,7 @@ using Asp.Versioning;
 using BloodLineAPI.Application.Common.Models;
 using BloodLineAPI.Application.Features.Donations.Queries.GetMobileDonationHistory;
 using BloodLineAPI.Application.Features.Donations.Queries.GetMobileLabResults;
+using BloodLineAPI.Application.Features.Donations.Commands.SubmitDonationRating;
 using BloodLineAPI.Attributes;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -75,9 +76,37 @@ public class DonationsController(ISender sender) : ControllerBase
         return Ok(ApiResponse<MobileLabResultResponse>.Ok(result.Data!));
     }
 
+    /// <summary>
+    /// Submit a rating and optional feedback for a completed donation (Mobile app).
+    /// </summary>
+    [HttpPost("{id:guid}/rate")]
+    [ProducesResponseType(typeof(ApiResponse<Unit>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> RateDonation(Guid id, [FromBody] RateDonationRequest request, CancellationToken ct)
+    {
+        if (!TryGetDonorId(out var userId))
+        {
+            return Unauthorized(ApiResponse<object>.Fail("Invalid or missing authentication token."));
+        }
+
+        var result = await _sender.Send(new SubmitDonationRatingCommand(id, userId, request.StarScore, request.FeedbackText), ct);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(ApiResponse<object>.Fail(result.Error!));
+        }
+
+        return Ok(ApiResponse<Unit>.Ok(result.Data));
+    }
+
     private bool TryGetDonorId(out Guid donorId)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(userIdClaim, out donorId);
     }
 }
+
+public sealed record RateDonationRequest(
+    int StarScore,
+    string? FeedbackText
+);

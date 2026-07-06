@@ -244,6 +244,16 @@ public sealed class CreateCampaignCommandHandler(
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
+        // Send campaign creation notifications to nearby eligible donors
+        try
+        {
+            campaignScheduler.ScheduleCampaignCreatedNotification(campaign.Id);
+        }
+        catch
+        {
+            // Ignore scheduler failures to keep response safe
+        }
+
         // 6. Map and return the campaign DTO
         var recurrenceDto = recurrenceEnabled ? new RecurrenceSettingsDto(
             true,

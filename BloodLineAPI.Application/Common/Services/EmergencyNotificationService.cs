@@ -121,7 +121,13 @@ public class EmergencyNotificationService(
             var recentCount = recentNotificationsMap.GetValueOrDefault(donor.Id, 0);
             if (recentCount >= 1)
             {
-                // Already notified -> skip
+                // Already notified -> add to failed list and skip
+                failedDonors.Add(new FailedDonorDto(
+                    donor.Id,
+                    donor.FullName,
+                    donor.PhoneNumber,
+                    donor.BloodType?.FullDisplayname ?? "Unknown",
+                    "تم إرسال إشعار لهذا المتبرع خلال الـ 24 ساعة الماضية"));
                 continue;
             }
 
@@ -239,6 +245,25 @@ public class EmergencyNotificationService(
             { "targetId", appeal.Id.ToString() }
         };
 
+        // Create failed notification records in the database for pre-filtered failures so they appear in the PDF report
+        var preFilteredFailedNotifications = resolved.FailedDonors.Select(fd => new Notification
+        {
+            UserId = fd.DonorId,
+            Title = resolved.Title,
+            Message = resolved.Message,
+            Type = NotificationType.UrgentBloodAppeal,
+            ActionPayload = System.Text.Json.JsonSerializer.Serialize(payload),
+            SentDate = dateTimeProvider.UtcNow,
+            IsSent = false,
+            SentVia = fd.FailureReason
+        }).ToList();
+
+        if (preFilteredFailedNotifications.Any())
+        {
+            dbContext.Notifications.AddRange(preFilteredFailedNotifications);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
         foreach (var donor in resolved.EligibleDonors)
         {
             try
@@ -301,7 +326,9 @@ public class EmergencyNotificationService(
         var preview = new NotificationPreviewResponseDto(
             Title: resolved.Title,
             Message: resolved.Message,
-            RecipientCount: resolved.EligibleDonors.Count
+            RecipientCount: resolved.EligibleDonors.Count,
+            FailedCount: resolved.FailedDonors.Count,
+            FailedDonors: resolved.FailedDonors
         );
 
         return Result<NotificationPreviewResponseDto>.Success(preview);

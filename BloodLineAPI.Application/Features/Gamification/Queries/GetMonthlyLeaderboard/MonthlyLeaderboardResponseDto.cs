@@ -4,5 +4,6 @@ namespace BloodLineAPI.Application.Features.Gamification.Queries.GetMonthlyLeade
 
 public sealed record MonthlyLeaderboardResponseDto(
     IReadOnlyList<MonthlyLeaderboardEntryDto> Entries,
-    MonthlyLeaderboardEntryDto? MyEntry
+    MonthlyLeaderboardEntryDto? MyEntry,
+    bool HasNextPage
 );

@@ -61,6 +61,8 @@ public sealed class CreateDonationCommandHandler(
             // Check for any active donation across all centers (Pending or Approved)
             var activeDonation = await dbContext.DonationAppointments
                 .FirstOrDefaultAsync(da => da.DonorId == donor.Id && 
+                                          da.Status != AppointmentStatus.Cancelled &&
+                                          da.Status != AppointmentStatus.NoShow &&
                                           (da.DonationStatus == DonationStatus.Pending || da.DonationStatus == DonationStatus.Approved), 
                                      cancellationToken);
 

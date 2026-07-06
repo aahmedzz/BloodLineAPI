@@ -4,7 +4,8 @@ namespace BloodLineAPI.Application.Features.Gamification.Queries.GetMonthlyLeade
 
 public sealed record GetMonthlyLeaderboardQuery(
     Guid RequestingDonorId,
-    int Top = 10,
+    int PageNumber = 1,
+    int PageSize = 20,
     bool OnlyMyDistrict = false,
     bool OnlyMyArea = false)
     : IRequest<MonthlyLeaderboardResponseDto>;

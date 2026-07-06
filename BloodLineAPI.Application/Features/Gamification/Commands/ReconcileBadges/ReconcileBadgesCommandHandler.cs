@@ -21,11 +21,16 @@ public sealed class ReconcileBadgesCommandHandler(
 {
     public async Task<Result<ReconcileBadgesResultDto>> Handle(ReconcileBadgesCommand request, CancellationToken cancellationToken)
     {
-        var allBadges = await dbContext.Badges
+        try
+        {
+            var allBadges = await dbContext.Badges
             .ToListAsync(cancellationToken);
 
         var badgesByKey = allBadges
             .ToDictionary(b => b.BadgeKey.ToLowerInvariant(), b => b);
+
+        var badgeIdToBadge = allBadges
+            .ToDictionary(b => b.Id, b => b);
 
         var donors = await dbContext.Donors
             .Include(d => d.DonorBadges)
@@ -40,30 +45,70 @@ public sealed class ReconcileBadgesCommandHandler(
             .GroupBy(da => da.DonorId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
+        var allowedActionTypes = new[]
+        {
+            PointActionType.WholeBloodDonation,
+            PointActionType.PlateletPlasmaDonation,
+            PointActionType.EmergencyResponse,
+            PointActionType.BadgeBonus
+        };
+
+        var allPointTransactions = await dbContext.PointTransactions
+            .Where(pt => allowedActionTypes.Contains(pt.ActionType))
+            .ToListAsync(cancellationToken);
+
+        var pointTransactionsByDonor = allPointTransactions
+            .GroupBy(pt => pt.DonorId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         var currentMonthKey = dateTimeProvider.LocalNow.ToString("yyyy-MM");
 
         int totalDonorsChecked = donors.Count;
         int totalDonorsUpdated = 0;
+        int totalDonationCountsCorrected = 0;
         int totalBadgesAwarded = 0;
+        int totalBadgesRemoved = 0;
         int totalPointsAwarded = 0;
+        int totalPointsDeducted = 0;
+        int totalDonationPointsAwarded = 0;
         var details = new List<DonorReconciliationDetailDto>();
 
         foreach (var donor in donors)
         {
-            if (!appointmentsByDonor.TryGetValue(donor.Id, out var donorAppointments) || donorAppointments.Count == 0)
+            var donorAppointments = appointmentsByDonor.TryGetValue(donor.Id, out var apps) 
+                ? apps 
+                : new List<DonationAppointment>();
+
+            var donorTransactions = pointTransactionsByDonor.TryGetValue(donor.Id, out var txs) 
+                ? txs 
+                : new List<PointTransaction>();
+
+            int previousDonationCount = donor.TotalDonationCount;
+            int correctedDonationCount = donorAppointments.Count;
+            bool isDonationCountCorrected = (previousDonationCount != correctedDonationCount);
+
+            if (isDonationCountCorrected)
             {
-                continue;
+                donor.TotalDonationCount = correctedDonationCount;
+                totalDonationCountsCorrected++;
             }
 
-            var earnedBadgeIds = donor.DonorBadges.Select(db => db.BadgeId).ToHashSet();
             var chronologicalAppointments = donorAppointments.OrderBy(da => da.ScheduledDate).ToList();
 
             var completedTypes = new HashSet<DonationType>();
             int milestoneCount = 0;
-            int donorBadgesAwarded = 0;
-            int donorPointsAwarded = 0;
-            var awardedBadgeKeys = new List<string>();
+            var qualifiedBadgeKeys = new HashSet<string>();
+            var earnedBadgeDates = new Dictionary<string, DateTime>();
 
+            int badgesAwardedCount = 0;
+            int badgesRemovedCount = 0;
+            int pointsAwardedCount = 0;
+            int pointsDeductedCount = 0;
+            int donationPointsAwardedCount = 0;
+            var awardedBadgeKeys = new List<string>();
+            var removedBadgeKeys = new List<string>();
+
+            // 1. Process chronological donations for milestone, specialized, and contextual badges
             foreach (var appointment in chronologicalAppointments)
             {
                 milestoneCount++;
@@ -72,7 +117,7 @@ public sealed class ReconcileBadgesCommandHandler(
                 // Earned date is appointment date + start time
                 var earnedDate = appointment.ScheduledDate.Add(appointment.StartTime);
 
-                // We evaluate which badges are earned at this point in time
+                // Determine badges earned at this point in time
                 var eligibleBadgeKeys = new List<string>();
 
                 // Milestone rules
@@ -124,67 +169,190 @@ public sealed class ReconcileBadgesCommandHandler(
                     eligibleBadgeKeys.Add("winter_guard");
                 }
 
-                // Award the eligible badges
+                // Collect all qualified badge keys with their earliest earned date
                 foreach (var badgeKey in eligibleBadgeKeys)
                 {
-                    if (badgesByKey.TryGetValue(badgeKey, out var badge))
+                    if (!qualifiedBadgeKeys.Contains(badgeKey))
                     {
-                        if (!earnedBadgeIds.Contains(badge.Id))
+                        qualifiedBadgeKeys.Add(badgeKey);
+                        earnedBadgeDates[badgeKey] = earnedDate;
+                    }
+                }
+
+                // 2. Reconcile points for the donation itself
+                PointActionType expectedActionType;
+                int expectedPoints;
+                string expectedDescription;
+
+                if (appointment.UrgentBloodAppealId != null)
+                {
+                    expectedActionType = PointActionType.EmergencyResponse;
+                    expectedPoints = 800;
+                    expectedDescription = "Emergency response donation completed";
+                }
+                else if (appointment.DonationType == DonationType.WholeBlood)
+                {
+                    expectedActionType = PointActionType.WholeBloodDonation;
+                    expectedPoints = 500;
+                    expectedDescription = "Whole blood donation completed";
+                }
+                else
+                {
+                    expectedActionType = PointActionType.PlateletPlasmaDonation;
+                    expectedPoints = 700;
+                    var typeStr = appointment.DonationType == DonationType.Platelets ? "Platelet" : "Plasma";
+                    expectedDescription = $"{typeStr} donation completed";
+                }
+
+                // Check if this point transaction already exists for the donor on this date
+                bool donationPointsExist = donorTransactions.Any(pt =>
+                    pt.ActionType == expectedActionType &&
+                    pt.TransactionDate.Date == appointment.ScheduledDate.Date);
+
+                if (!donationPointsExist)
+                {
+                    var monthKey = earnedDate.ToString("yyyy-MM");
+                    var donationPt = new PointTransaction
+                    {
+                        Id = Guid.NewGuid(),
+                        DonorId = donor.Id,
+                        ActionType = expectedActionType,
+                        Points = expectedPoints,
+                        Description = expectedDescription,
+                        MonthKey = monthKey,
+                        TransactionDate = earnedDate
+                    };
+
+                    dbContext.PointTransactions.Add(donationPt);
+                    donor.TotalPoints += expectedPoints;
+                    if (monthKey == currentMonthKey)
+                    {
+                        donor.MonthlyPoints += expectedPoints;
+                    }
+
+                    donationPointsAwardedCount++;
+                    pointsAwardedCount += expectedPoints;
+                }
+            }
+
+            // 3. Award qualified badges that the donor does not have
+            var currentBadgesByBadgeId = donor.DonorBadges.ToDictionary(db => db.BadgeId, db => db);
+            foreach (var badgeKey in qualifiedBadgeKeys)
+            {
+                if (badgesByKey.TryGetValue(badgeKey, out var badge))
+                {
+                    if (!currentBadgesByBadgeId.ContainsKey(badge.Id))
+                    {
+                        var earnedDate = earnedBadgeDates.TryGetValue(badgeKey, out var date) ? date : dateTimeProvider.UtcNow;
+                        var donorBadge = new DonorBadge
                         {
-                            // Add DonorBadge record
-                            var donorBadge = new DonorBadge
+                            Id = Guid.NewGuid(),
+                            DonorId = donor.Id,
+                            BadgeId = badge.Id,
+                            EarnedDate = earnedDate
+                        };
+
+                        dbContext.DonorBadges.Add(donorBadge);
+                        awardedBadgeKeys.Add(badgeKey);
+                        badgesAwardedCount++;
+
+                        if (badge.BonusPoints > 0)
+                        {
+                            var monthKey = earnedDate.ToString("yyyy-MM");
+                            var badgeBonusPt = new PointTransaction
                             {
                                 Id = Guid.NewGuid(),
                                 DonorId = donor.Id,
-                                BadgeId = badge.Id,
-                                EarnedDate = earnedDate
+                                ActionType = PointActionType.BadgeBonus,
+                                Points = badge.BonusPoints,
+                                Description = $"Badge bonus: {badge.BadgeName}",
+                                MonthKey = monthKey,
+                                TransactionDate = earnedDate
                             };
 
-                            dbContext.DonorBadges.Add(donorBadge);
-                            earnedBadgeIds.Add(badge.Id);
-                            awardedBadgeKeys.Add(badgeKey);
-                            donorBadgesAwarded++;
-
-                            // Award Bonus Points
-                            if (badge.BonusPoints > 0)
+                            dbContext.PointTransactions.Add(badgeBonusPt);
+                            donor.TotalPoints += badge.BonusPoints;
+                            if (monthKey == currentMonthKey)
                             {
-                                var monthKey = earnedDate.ToString("yyyy-MM");
-                                dbContext.PointTransactions.Add(new PointTransaction
-                                {
-                                    Id = Guid.NewGuid(),
-                                    DonorId = donor.Id,
-                                    ActionType = PointActionType.BadgeBonus,
-                                    Points = badge.BonusPoints,
-                                    Description = $"Badge bonus: {badge.BadgeName}",
-                                    MonthKey = monthKey,
-                                    TransactionDate = earnedDate
-                                });
+                                donor.MonthlyPoints += badge.BonusPoints;
+                            }
 
-                                donor.TotalPoints += badge.BonusPoints;
-                                if (monthKey == currentMonthKey)
+                            pointsAwardedCount += badge.BonusPoints;
+                        }
+                    }
+                }
+            }
+
+            // 4. Remove over-awarded badges that the donor no longer qualifies for
+            foreach (var currentBadge in donor.DonorBadges.ToList())
+            {
+                if (badgeIdToBadge.TryGetValue(currentBadge.BadgeId, out var badge))
+                {
+                    var badgeKey = badge.BadgeKey.ToLowerInvariant();
+                    if (!qualifiedBadgeKeys.Contains(badgeKey))
+                    {
+                        dbContext.DonorBadges.Remove(currentBadge);
+                        removedBadgeKeys.Add(badgeKey);
+                        badgesRemovedCount++;
+
+                        // Revert the points for the badge bonus
+                        if (badge.BonusPoints > 0)
+                        {
+                            var ptToRemove = donorTransactions.FirstOrDefault(pt =>
+                                pt.ActionType == PointActionType.BadgeBonus &&
+                                pt.Description != null &&
+                                (pt.Description.Contains(badge.BadgeName) || pt.Description.Contains(badge.BadgeKey)));
+
+                            if (ptToRemove != null)
+                            {
+                                dbContext.PointTransactions.Remove(ptToRemove);
+                                donor.TotalPoints -= ptToRemove.Points;
+                                if (ptToRemove.MonthKey == currentMonthKey)
                                 {
-                                    donor.MonthlyPoints += badge.BonusPoints;
+                                    donor.MonthlyPoints -= ptToRemove.Points;
                                 }
-
-                                donorPointsAwarded += badge.BonusPoints;
+                                pointsDeductedCount += ptToRemove.Points;
+                            }
+                            else
+                            {
+                                donor.TotalPoints -= badge.BonusPoints;
+                                pointsDeductedCount += badge.BonusPoints;
                             }
                         }
                     }
                 }
             }
 
-            if (donorBadgesAwarded > 0)
+            // Clamp donor points to avoid negative numbers
+            donor.TotalPoints = Math.Max(0, donor.TotalPoints);
+            donor.MonthlyPoints = Math.Max(0, donor.MonthlyPoints);
+
+            bool isDonorUpdated = isDonationCountCorrected || 
+                                  badgesAwardedCount > 0 || 
+                                  badgesRemovedCount > 0 || 
+                                  donationPointsAwardedCount > 0;
+
+            if (isDonorUpdated)
             {
                 totalDonorsUpdated++;
-                totalBadgesAwarded += donorBadgesAwarded;
-                totalPointsAwarded += donorPointsAwarded;
+                totalBadgesAwarded += badgesAwardedCount;
+                totalBadgesRemoved += badgesRemovedCount;
+                totalPointsAwarded += pointsAwardedCount;
+                totalPointsDeducted += pointsDeductedCount;
+                totalDonationPointsAwarded += donationPointsAwardedCount;
 
                 details.Add(new DonorReconciliationDetailDto(
                     donor.Id,
                     donor.FullName,
-                    donorBadgesAwarded,
-                    donorPointsAwarded,
-                    awardedBadgeKeys));
+                    previousDonationCount,
+                    correctedDonationCount,
+                    badgesAwardedCount,
+                    badgesRemovedCount,
+                    pointsAwardedCount,
+                    pointsDeductedCount,
+                    donationPointsAwardedCount,
+                    awardedBadgeKeys,
+                    removedBadgeKeys));
             }
         }
 
@@ -196,9 +364,18 @@ public sealed class ReconcileBadgesCommandHandler(
         return Result<ReconcileBadgesResultDto>.Success(new ReconcileBadgesResultDto(
             totalDonorsChecked,
             totalDonorsUpdated,
+            totalDonationCountsCorrected,
             totalBadgesAwarded,
+            totalBadgesRemoved,
             totalPointsAwarded,
+            totalPointsDeducted,
+            totalDonationPointsAwarded,
             details));
+        }
+        catch (Exception ex)
+        {
+            return Result<ReconcileBadgesResultDto>.Failure(ex.ToString());
+        }
     }
 
     private static bool IsRamadan(DateTime date)

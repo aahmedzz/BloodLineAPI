@@ -101,6 +101,13 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                     var slotMinutes = SlotDurationMinutes ?? 15;
                     var current = open;
 
+                    // Align the start time up to the next slot duration boundary (e.g. 16:23 -> 16:30)
+                    var remainder = current.TotalMinutes % slotMinutes;
+                    if (remainder > 0)
+                    {
+                        current = TimeSpan.FromMinutes(Math.Ceiling(current.TotalMinutes / slotMinutes) * slotMinutes);
+                    }
+
                     if (open <= close)
                     {
                         // Standard non-overnight slot generation

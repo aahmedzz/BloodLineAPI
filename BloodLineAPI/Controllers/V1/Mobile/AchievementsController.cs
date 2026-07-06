@@ -29,7 +29,8 @@ public sealed class AchievementsController(ISender sender) : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<MonthlyLeaderboardResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetMonthlyLeaderboard(
-        [FromQuery] int top = 10,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
         [FromQuery] bool onlyMyDistrict = false,
         [FromQuery] bool onlyMyArea = false,
         CancellationToken cancellationToken = default)
@@ -40,7 +41,7 @@ public sealed class AchievementsController(ISender sender) : ControllerBase
         }
 
         var result = await sender.Send(
-            new GetMonthlyLeaderboardQuery(donorId, top, onlyMyDistrict, onlyMyArea),
+            new GetMonthlyLeaderboardQuery(donorId, pageNumber, pageSize, onlyMyDistrict, onlyMyArea),
             cancellationToken);
 
         return Ok(ApiResponse<MonthlyLeaderboardResponseDto>.Ok(result));
@@ -50,7 +51,8 @@ public sealed class AchievementsController(ISender sender) : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<AllTimeLeaderboardResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAllTimeLeaderboard(
-        [FromQuery] int top = 10,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
         [FromQuery] bool onlyMyDistrict = false,
         [FromQuery] bool onlyMyArea = false,
         CancellationToken cancellationToken = default)
@@ -61,7 +63,7 @@ public sealed class AchievementsController(ISender sender) : ControllerBase
         }
 
         var result = await sender.Send(
-            new GetAllTimeLeaderboardQuery(donorId, top, onlyMyDistrict, onlyMyArea),
+            new GetAllTimeLeaderboardQuery(donorId, pageNumber, pageSize, onlyMyDistrict, onlyMyArea),
             cancellationToken);
 
         return Ok(ApiResponse<AllTimeLeaderboardResponseDto>.Ok(result));

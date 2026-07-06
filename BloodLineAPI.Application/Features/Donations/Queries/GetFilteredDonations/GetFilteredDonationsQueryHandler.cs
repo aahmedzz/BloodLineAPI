@@ -149,7 +149,8 @@ public sealed class GetFilteredDonationsQueryHandler(IApplicationDbContext dbCon
 
         // 5. Materialize page records
         var donationsList = await query
-            .OrderByDescending(da => da.CreatedAt)
+            .OrderBy(da => da.SentToLab)
+            .ThenByDescending(da => da.CreatedAt)
             .Skip((page - 1) * limit)
             .Take(limit)
             .ToListAsync(cancellationToken);

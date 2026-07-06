@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<InactivityReminderJob>();
         services.AddScoped<CooldownExpiryJob>();
         services.AddScoped<SendNotificationBackgroundJob>();
+        services.AddScoped<CampaignCreatedNotificationJob>();
         services.AddScoped<ICampaignScheduler, CampaignScheduler>();
         services.AddScoped<IDonorStatusScheduler, DonorStatusScheduler>();
         services.AddScoped<IBackgroundNotificationService, BackgroundNotificationService>();

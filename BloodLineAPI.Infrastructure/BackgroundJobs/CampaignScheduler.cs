@@ -66,4 +66,10 @@ public class CampaignScheduler(
             }
         }
     }
+
+    public void ScheduleCampaignCreatedNotification(Guid campaignId)
+    {
+        backgroundJobClient.Enqueue<CampaignCreatedNotificationJob>(
+            job => job.ExecuteAsync(campaignId, CancellationToken.None));
+    }
 }

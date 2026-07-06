@@ -10,7 +10,9 @@ public sealed class GetAllTimeLeaderboardQueryHandler(IApplicationDbContext dbCo
 {
     public async Task<AllTimeLeaderboardResponseDto> Handle(GetAllTimeLeaderboardQuery request, CancellationToken cancellationToken)
     {
-        var top = request.Top <= 0 ? 10 : Math.Min(request.Top, 100);
+        var pageNumber = request.PageNumber <= 0 ? 1 : request.PageNumber;
+        var pageSize = request.PageSize <= 0 ? 20 : Math.Min(request.PageSize, 100);
+        var skip = (pageNumber - 1) * pageSize;
 
         var requester = await dbContext.Donors
             .AsNoTracking()
@@ -29,7 +31,7 @@ public sealed class GetAllTimeLeaderboardQueryHandler(IApplicationDbContext dbCo
         {
             if (string.IsNullOrWhiteSpace(requester.District))
             {
-                return new AllTimeLeaderboardResponseDto([], null);
+                return new AllTimeLeaderboardResponseDto([], null, false);
             }
 
             query = query.Where(d => d.District == requester.District);
@@ -39,17 +41,20 @@ public sealed class GetAllTimeLeaderboardQueryHandler(IApplicationDbContext dbCo
         {
             if (string.IsNullOrWhiteSpace(requester.Area))
             {
-                return new AllTimeLeaderboardResponseDto([], null);
+                return new AllTimeLeaderboardResponseDto([], null, false);
             }
 
             query = query.Where(d => d.Area == requester.Area);
         }
 
+        var totalCount = await query.CountAsync(cancellationToken);
+
         var donors = await query
             .OrderByDescending(d => d.TotalPoints)
             .ThenBy(d => d.FirstName)
             .ThenBy(d => d.SecondName)
-            .Take(top)
+            .Skip(skip)
+            .Take(pageSize)
             .Select(d => new
             {
                 d.Id,
@@ -70,7 +75,7 @@ public sealed class GetAllTimeLeaderboardQueryHandler(IApplicationDbContext dbCo
                 d.District,
                 d.Area,
                 d.TotalPoints,
-                index + 1,
+                skip + index + 1,
                 d.Id == request.RequestingDonorId))
             .ToList();
 
@@ -103,6 +108,8 @@ public sealed class GetAllTimeLeaderboardQueryHandler(IApplicationDbContext dbCo
                 true);
         }
 
-        return new AllTimeLeaderboardResponseDto(entries, myEntry);
+        var hasNextPage = (pageNumber * pageSize) < totalCount;
+
+        return new AllTimeLeaderboardResponseDto(entries, myEntry, hasNextPage);
     }
 }

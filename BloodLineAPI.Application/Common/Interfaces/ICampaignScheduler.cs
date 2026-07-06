@@ -9,4 +9,5 @@ public interface ICampaignScheduler
     string? ScheduleDeactivation(Guid campaignId, DateTime localEndDateTime);
     string? ScheduleCompletion(Guid campaignId, DateTime localEndDateTime);
     void UnscheduleJobs(IEnumerable<string> jobIds);
+    void ScheduleCampaignCreatedNotification(Guid campaignId);
 }

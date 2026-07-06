@@ -9,11 +9,11 @@ public enum NotificationType
     BadgeEarned,
     PointsEarned,
     RateDonationCenter,
-    DonationCompleted,
     UrgentBloodAppeal,
     General,
     AppointmentRescheduled,
     DonationReminder,
-    BloodBagIssued
+    BloodBagIssued,
+    NewCampaignNearby,
+    LabResultsReady
 }
-

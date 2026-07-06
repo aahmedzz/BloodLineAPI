@@ -14,11 +14,23 @@ public sealed class GetAppointmentDetailsQueryHandler(IApplicationDbContext dbCo
         var appointment = await dbContext.DonationAppointments
             .AsNoTracking()
             .Include(a => a.DonationCenter)
+                .ThenInclude(c => c.OpeningHours)
+            .Include(a => a.DonationCenter)
+                .ThenInclude(c => c.CenterExclusions)
             .Include(a => a.HealthPreScreening)
             .FirstOrDefaultAsync(a => a.Id == request.AppointmentId && a.DonorId == request.DonorId, cancellationToken)
             ?? throw new NotFoundException("DonationAppointment", request.AppointmentId);
 
         var center = appointment.DonationCenter;
+
+        var operatingHours = center.ResolveOperatingHours(
+            appointment.ScheduledDate,
+            center.CenterExclusions.ToList(),
+            center.OpeningHours.ToList());
+
+        var operatingHoursText = operatingHours.HasValue
+            ? $"{operatingHours.Value.Open:hh\\:mm} - {operatingHours.Value.Close:hh\\:mm}"
+            : "Closed";
 
         var centerDto = new AppointmentDonationCenterDto(
             center.Id,
@@ -29,7 +41,7 @@ public sealed class GetAppointmentDetailsQueryHandler(IApplicationDbContext dbCo
             center.Longitude,
             center.CenterType.ToString(),
             center.Status.ToString(),
-            $"{center.StartTime:hh\\:mm} - {center.EndTime:hh\\:mm}");
+            operatingHoursText);
 
         HealthPreScreeningSummaryDto? screeningDto = null;
         if (appointment.HealthPreScreening is not null)

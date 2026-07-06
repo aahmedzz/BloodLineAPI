@@ -20,10 +20,15 @@ public sealed class GetCenterBookingDetailsQueryHandler(
     {
         // 1. Fetch donation center
         var center = await dbContext.DonationCenters
+            .Include(c => c.OpeningHours)
+            .Include(c => c.CenterExclusions)
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == request.CenterId, cancellationToken);
 
         if (center is null) return null;
+
+        var localNow = dateTimeProvider.LocalNow;
+        var todayDate = localNow.Date;
 
         // 2. Fetch average rating (null if no ratings exist)
         var averageRating = await dbContext.DonationRatings
@@ -42,8 +47,6 @@ public sealed class GetCenterBookingDetailsQueryHandler(
                 .SumAsync(w => w.TargetCount, cancellationToken);
 
             // local week date boundaries (Saturday -> Friday)
-            var localNow = dateTimeProvider.LocalNow;
-            var todayDate = localNow.Date;
             int daysSinceSaturday = ((int)localNow.DayOfWeek - (int)DayOfWeek.Saturday + 7) % 7;
             var startOfWeek = todayDate.AddDays(-daysSinceSaturday);
             var endOfWeek = startOfWeek.AddDays(6);
@@ -91,7 +94,14 @@ public sealed class GetCenterBookingDetailsQueryHandler(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var operatingHoursText = $"{center.StartTime:hh\\:mm} - {center.EndTime:hh\\:mm}";
+        var operatingHours = center.ResolveOperatingHours(
+            todayDate, 
+            center.CenterExclusions.ToList(), 
+            center.OpeningHours.ToList());
+
+        var operatingHoursText = operatingHours.HasValue
+            ? $"{operatingHours.Value.Open:hh\\:mm} - {operatingHours.Value.Close:hh\\:mm}"
+            : "Closed";
 
         return new BookingDetailsDto(
             center.Id,

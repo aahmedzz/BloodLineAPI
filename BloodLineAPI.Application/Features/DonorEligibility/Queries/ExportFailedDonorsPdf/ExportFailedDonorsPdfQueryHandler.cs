@@ -33,23 +33,33 @@ public sealed class ExportFailedDonorsPdfQueryHandler(
         // 2. Query failed notifications matching the target appeal ID
         var appealIdStr = request.AppealId.ToString();
 
-        var failedDonors = await dbContext.Donors
+        var failedNotifications = await dbContext.Notifications
             .AsNoTracking()
-            .Include(d => d.BloodType)
-            .Where(d => dbContext.Notifications.Any(n => 
-                n.UserId == d.User.Id &&
+            .Include(n => n.User)
+                .ThenInclude(u => u.Donor)
+                    .ThenInclude(d => d!.BloodType)
+            .Where(n => 
                 n.Type == NotificationType.UrgentBloodAppeal &&
                 n.IsSent == false &&
                 n.ActionPayload != null &&
-                n.ActionPayload.Contains(appealIdStr)))
-            .Select(d => new FailedDonorDto(
-                d.Id,
-                d.FullName,
-                d.PhoneNumber,
-                d.BloodType != null ? d.BloodType.FullDisplayname : "غير معروف",
-                "فشل نظام الإشعارات في إرسال إشعار الهاتف"
-            ))
+                n.ActionPayload.Contains(appealIdStr) &&
+                n.User != null &&
+                n.User.Donor != null)
             .ToListAsync(cancellationToken);
+
+        var failedDonors = failedNotifications.Select(n => {
+            var donor = n.User.Donor!;
+            var reason = !string.IsNullOrEmpty(n.SentVia) 
+                ? n.SentVia 
+                : "فشل نظام الإشعارات في إرسال إشعار الهاتف";
+            return new FailedDonorDto(
+                donor.Id,
+                donor.FullName,
+                donor.PhoneNumber,
+                donor.BloodType != null ? donor.BloodType.FullDisplayname : "غير معروف",
+                reason
+            );
+        }).ToList();
 
         // 3. Generate report PDF
         var localNow = dateTimeProvider.LocalNow;

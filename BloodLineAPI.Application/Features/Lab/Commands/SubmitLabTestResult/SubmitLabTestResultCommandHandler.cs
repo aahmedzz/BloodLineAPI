@@ -8,10 +8,12 @@ namespace BloodLineAPI.Application.Features.Lab.Commands.SubmitLabTestResult;
 
 public sealed class SubmitLabTestResultCommandHandler(
     ICurrentUserService currentUserService,
-    IApplicationDbContext dbContext) : IRequestHandler<SubmitLabTestResultCommand, SubmitLabTestResultResult>
+    IApplicationDbContext dbContext,
+    IBackgroundNotificationService backgroundNotificationService) : IRequestHandler<SubmitLabTestResultCommand, SubmitLabTestResultResult>
 {
     private readonly ICurrentUserService _currentUserService = currentUserService;
     private readonly IApplicationDbContext _dbContext = dbContext;
+    private readonly IBackgroundNotificationService _backgroundNotificationService = backgroundNotificationService;
 
     public async Task<SubmitLabTestResultResult> Handle(SubmitLabTestResultCommand request, CancellationToken cancellationToken)
     {
@@ -92,6 +94,20 @@ public sealed class SubmitLabTestResultCommandHandler(
         if (donation.Donor != null)
         {
             donation.Donor.BloodTypeId = confirmedBloodTypeId;
+            if (outcome == "rejected")
+            {
+                var oldStatus = donation.Donor.Status;
+                if (oldStatus != DonorStatus.Ineligible)
+                {
+                    donation.Donor.Status = DonorStatus.Ineligible;
+                    donation.Donor.AddDomainEvent(new BloodLineAPI.Domain.Events.DonorStatusChangedEvent(
+                        donation.Donor.Id,
+                        oldStatus,
+                        DonorStatus.Ineligible,
+                        "Unsafe lab test results (Positive for infectious disease screening)",
+                        now));
+                }
+            }
         }
 
         var tx = new Domain.Entities.InventoryTransaction
@@ -106,6 +122,28 @@ public sealed class SubmitLabTestResultCommandHandler(
 
         await _dbContext.InventoryTransactions.AddAsync(tx, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Enqueue lab results ready push notification
+        try
+        {
+            var payload = new Dictionary<string, string>
+            {
+                ["targetEntity"] = "DonationAppointment",
+                ["targetId"] = donation.Id.ToString(),
+                ["labResultId"] = testResult.Id.ToString()
+            };
+
+            _backgroundNotificationService.EnqueueNotification(
+                donation.DonorId,
+                "🧪 نتائج الفحوصات المخبرية جاهزة",
+                "عزيزي المتبرع، نود إعلامك بأن نتائج التحاليل الطبية لتبرعك الأخير أصبحت جاهزة الآن. يمكنك الاطلاع عليها بأمان وسرية تامة من خلال صفحة التبرعات في التطبيق.",
+                NotificationType.LabResultsReady,
+                payload);
+        }
+        catch
+        {
+            // Ignore push notification failures to keep transaction safe
+        }
 
         var staff = await _dbContext.Staff.FindAsync([staffId], cancellationToken);
         var staffName = staff?.FullName ?? string.Empty;

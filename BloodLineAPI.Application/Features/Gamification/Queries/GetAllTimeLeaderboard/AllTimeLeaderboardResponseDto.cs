@@ -4,5 +4,6 @@ namespace BloodLineAPI.Application.Features.Gamification.Queries.GetAllTimeLeade
 
 public sealed record AllTimeLeaderboardResponseDto(
     IReadOnlyList<AllTimeLeaderboardEntryDto> Entries,
-    AllTimeLeaderboardEntryDto? MyEntry
+    AllTimeLeaderboardEntryDto? MyEntry,
+    bool HasNextPage
 );

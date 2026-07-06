@@ -135,6 +135,16 @@ namespace BloodLineAPI.Domain.Entities.DonationEntities
                 throw new DomainException("Cannot cancel an appointment that is already cancelled or completed.");
             }
 
+            if (CheckInTime != null)
+            {
+                throw new DomainException("Cannot cancel an appointment that has checked in.");
+            }
+
+            if (DonationStatus != DonationStatus.Pending)
+            {
+                throw new DomainException("Cannot cancel an appointment that has started the donation process.");
+            }
+
             var appointmentStart = ScheduledDate.Date.Add(StartTime);
             if (appointmentStart <= currentLocalTime)
             {
